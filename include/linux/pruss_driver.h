@@ -9,6 +9,7 @@
 #ifndef _PRUSS_DRIVER_H_
 #define _PRUSS_DRIVER_H_
 
+#include <linux/pruss.h>
 #include <linux/types.h>
 
 /*
