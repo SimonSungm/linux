@@ -128,7 +128,7 @@ static void pgd_ctor(struct mm_struct *mm, pgd_t *pgd)
 
 	/* list required to sync kernel mapping updates */
 	if (!SHARED_KERNEL_PMD) {
-		pgd_set_mm(pgd, mm);
+		pgd_set_mm(pgd, mm);		// all working on struct page 
 		pgd_list_add(pgd);
 	}
 }
@@ -420,20 +420,27 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 	pmd_t *u_pmds[MAX_PREALLOCATED_USER_PMDS];
 	pmd_t *pmds[MAX_PREALLOCATED_PMDS];
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	pgd = (pgd_t *)pgp_ro_alloc();
+	if(pgd == NULL){
+		printk("[PGP]: pgd allocation fail, use normal alloctor instead\n");
+		pgd = _pgd_alloc();
+	}
+#else
 	pgd = _pgd_alloc();
-
+#endif
 	if (pgd == NULL)
 		goto out;
 
 	mm->pgd = pgd;
 
-	if (preallocate_pmds(mm, pmds, PREALLOCATED_PMDS) != 0)
+	if (preallocate_pmds(mm, pmds, PREALLOCATED_PMDS) != 0)		// nothing need to do in non-PAE mode
 		goto out_free_pgd;
 
-	if (preallocate_pmds(mm, u_pmds, PREALLOCATED_USER_PMDS) != 0)
+	if (preallocate_pmds(mm, u_pmds, PREALLOCATED_USER_PMDS) != 0)	// nothing need to do in non-PAE mode
 		goto out_free_pmds;
 
-	if (paravirt_pgd_alloc(mm) != 0)
+	if (paravirt_pgd_alloc(mm) != 0)				// nothing need to do in non para-virt mode
 		goto out_free_user_pmds;
 
 	/*
@@ -444,8 +451,8 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 	spin_lock(&pgd_lock);
 
 	pgd_ctor(mm, pgd);
-	pgd_prepopulate_pmd(mm, pgd, pmds);
-	pgd_prepopulate_user_pmd(mm, pgd, u_pmds);
+	pgd_prepopulate_pmd(mm, pgd, pmds);			// nothing need to do in non-PAE mode
+	pgd_prepopulate_user_pmd(mm, pgd, u_pmds);	// nothing need to do in non-PAE mode
 
 	spin_unlock(&pgd_lock);
 
@@ -456,17 +463,31 @@ out_free_user_pmds:
 out_free_pmds:
 	free_pmds(mm, pmds, PREALLOCATED_PMDS);
 out_free_pgd:
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	if(!pgp_ro_free((void *)pgd)) {
+		printk("[PGP]: pgd free fail, not a pgp page\n");
+		_pgd_free(pgd);
+	}
+#else
 	_pgd_free(pgd);
+#endif
 out:
 	return NULL;
 }
 
 void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
-	pgd_mop_up_pmds(mm, pgd);
+	pgd_mop_up_pmds(mm, pgd);		// nothing need to do in non-PAE mode
 	pgd_dtor(pgd);
-	paravirt_pgd_free(mm, pgd);
+	paravirt_pgd_free(mm, pgd);		// nothing need to do in non para-virt mode
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	if(!pgp_ro_free((void *)pgd)) {
+		printk("[PGP]: pgd free fail, not a pgp page\n");
+		_pgd_free(pgd);
+	}
+#else
 	_pgd_free(pgd);
+#endif
 }
 
 /*

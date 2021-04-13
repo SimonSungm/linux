@@ -103,6 +103,10 @@
 #define CREATE_TRACE_POINTS
 #include <trace/events/initcall.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 static int kernel_init(void *);
 
 extern void init_IRQ(void);
@@ -520,6 +524,21 @@ static inline void initcall_debug_enable(void)
 }
 #endif
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+u64 robuf_start_pgp;
+
+static void pgp_init(void)
+{
+	printk("PAGE_TABLE_PROTECTION: pgp_init\n");
+	robuf_start_pgp = (u64) virt_to_phys( kmalloc(PGP_ROBUF_SIZE,GFP_KERNEL) ); 
+	memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
+	pgp_ro_buf_ready = true;
+	// For test
+	printk("PAGE_TABLE_PROTECTION: start_va is %p\n",PGP_ROBUF_VA);
+	// Test done
+}
+#endif
+
 /* Report memory auto-initialization states for this boot. */
 static void __init report_meminit(void)
 {
@@ -626,7 +645,9 @@ asmlinkage __visible void __init start_kernel(void)
 	sort_main_extable();
 	trap_init();
 	mm_init();
-
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	pgp_init();
+#endif
 	ftrace_init();
 
 	/* trace_printk can be enabled here */

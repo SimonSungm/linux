@@ -88,6 +88,31 @@ static inline void pmd_populate(struct mm_struct *mm, pmd_t *pmd,
 #if CONFIG_PGTABLE_LEVELS > 2
 static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+	pmd_t *pmd;
+	struct page *page;
+	gfp_t gfp = GFP_KERNEL_ACCOUNT | __GFP_ZERO;
+
+	pmd = pgp_ro_alloc();
+	if (!pmd) {
+		printk("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		if (mm == &init_mm)
+			gfp &= ~__GFP_ACCOUNT;
+		page = alloc_pages(gfp, 0);
+		if (!page)
+			return NULL;
+		if (!pgtable_pmd_page_ctor(page)) {
+			__free_pages(page, 0);
+			return NULL;
+		}
+		return (pmd_t *)page_address(page);
+	}
+	if (!pgtable_pmd_page_ctor(virt_to_page(pmd))) {			// the ro buffer should not be vmalloc area
+			pgp_ro_free((void *pmd));
+		return NULL;
+	}
+	return pmd;
+#else
 	struct page *page;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT | __GFP_ZERO;
 
@@ -101,13 +126,21 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 		return NULL;
 	}
 	return (pmd_t *)page_address(page);
+#endif
 }
 
 static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
 {
 	BUG_ON((unsigned long)pmd & (PAGE_SIZE-1));
 	pgtable_pmd_page_dtor(virt_to_page(pmd));
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+	if(!pgp_ro_free((void *pmd))) {
+		printk("[PGP]: pmd free fail, not a pgp page\n");
+		free_page((unsigned long)pmd);
+	}
+#else
 	free_page((unsigned long)pmd);
+#endif
 }
 
 extern void ___pmd_free_tlb(struct mmu_gather *tlb, pmd_t *pmd);
@@ -149,17 +182,38 @@ static inline void p4d_populate_safe(struct mm_struct *mm, p4d_t *p4d, pud_t *pu
 
 static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	pud_t *pud;
+	gfp_t gfp = GFP_KERNEL_ACCOUNT;
+
+	put = (pud_t *)pgp_ro_zero_alloc();
+	if(!pud){
+		printk("[PGP]: pud allocation fail, use normal alloctor instead\n");
+		if (mm == &init_mm)
+			gfp &= ~__GFP_ACCOUNT;
+		return (pud_t *)get_zeroed_page(gfp);
+	}
+	return pud;
+#else
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
 	if (mm == &init_mm)
 		gfp &= ~__GFP_ACCOUNT;
 	return (pud_t *)get_zeroed_page(gfp);
+#endif
 }
 
 static inline void pud_free(struct mm_struct *mm, pud_t *pud)
 {
 	BUG_ON((unsigned long)pud & (PAGE_SIZE-1));
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	if(!pgp_ro_free((void *)pud)) {
+		printk("[PGP]: pud free fail, not a pgp page\n");
+		free_page((unsigned long)pud);
+	}
+#else
 	free_page((unsigned long)pud);
+#endif
 }
 
 extern void ___pud_free_tlb(struct mmu_gather *tlb, pud_t *pud);
@@ -189,11 +243,25 @@ static inline void pgd_populate_safe(struct mm_struct *mm, pgd_t *pgd, p4d_t *p4
 
 static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+	p4d_t *p4d;
+	gfp_t gfp = GFP_KERNEL_ACCOUNT;
+
+	p4d = pgp_ro_zero_alloc();
+	if(!p4d) {
+		printk("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+		if (mm == &init_mm)
+			gfp &= ~__GFP_ACCOUNT;
+		return (p4d_t *)get_zeroed_page(gfp);
+	}
+	return p4d
+#else
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
 	if (mm == &init_mm)
 		gfp &= ~__GFP_ACCOUNT;
 	return (p4d_t *)get_zeroed_page(gfp);
+#endif
 }
 
 static inline void p4d_free(struct mm_struct *mm, p4d_t *p4d)
@@ -202,7 +270,14 @@ static inline void p4d_free(struct mm_struct *mm, p4d_t *p4d)
 		return;
 
 	BUG_ON((unsigned long)p4d & (PAGE_SIZE-1));
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	if(pgp_ro_free((void *)p4d)) {
+		printk("[PGP]: pud free fail, not a pgp page\n");
+		free_page((unsigned long)p4d);
+	}
+#else
 	free_page((unsigned long)p4d);
+#endif
 }
 
 extern void ___p4d_free_tlb(struct mmu_gather *tlb, p4d_t *p4d);
