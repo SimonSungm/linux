@@ -10,6 +10,7 @@
 #include <asm-generic/sections.h>
 #include <asm/sections.h>
 #include <asm/io.h>
+#include <linux/list.h>
 
 #include "pt.h"
 
@@ -25,38 +26,6 @@ extern char _stext[], _etext[];
 
 #define REGION_NUM 1
 struct px_memory_region machine_mem[REGION_NUM] = {
-    // {
-    //     .start = 0xa0000,
-    //     .end = 0x100000
-    // }, 
-    // {
-    //     .start = 0x3a000000,
-    //     .end = 0x3f200000
-    // },
-    // {
-    //     .start = 0x5f5d6000,
-    //     .end = 0x5f80d000
-    // }, 
-    // {
-    //     .start = 0x626ea000,
-    //     .end = 0x627b9000
-    // },
-    // {
-    //     .start = 0x659bd000,
-    //     .end = 0x659be000
-    // },
-    // {
-    //     .start = 0x67a1d000,
-    //     .end = 0x6a32e000
-    // },
-    // {
-    //     .start = 0x6a68e000,
-    //     .end = 0x6d7ca000
-    // },
-    // {
-    //     .start = 0x70000000,
-    //     .end = 0x100000000
-    // }
     {
         .start = 0,
         .end = 0
@@ -181,7 +150,7 @@ int gphys2phys_pxn(void)
         ptr = list_entry(l, struct px_memory_region, list);
         if(ptr->start - last != 0) {
 #ifndef __DEBUG_TEXT_PROTECTION
-            jailhouse_call_arg2(JAILHOUSE_HC_GPHYS2PHYS_PXN, last, ptr->start-last);
+            jailhouse_call_arg2_custom(JAILHOUSE_HC_GPHYS2PHYS_PXN, last, ptr->start-last);
 #else
             printk("[hypercall] last: 0x%016lx, size: 0x%016lx\n", last, ptr->start-last);
 #endif 
@@ -190,7 +159,7 @@ int gphys2phys_pxn(void)
     }
     if(phys_end - last != 0) {
 #ifndef __DEBUG_TEXT_PROTECTION
-        jailhouse_call_arg2(JAILHOUSE_HC_GPHYS2PHYS_PXN, last, phys_end-last);
+        jailhouse_call_arg2_custom(JAILHOUSE_HC_GPHYS2PHYS_PXN, last, phys_end-last);
 #else
         printk("[hypercall] last: 0x%016lx, size: 0x%016lx\n", last, ptr->start-last);
 #endif 

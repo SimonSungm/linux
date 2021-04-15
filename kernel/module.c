@@ -56,8 +56,9 @@
 #include <uapi/linux/module.h>
 #include "module-internal.h"
 
-#define CONFIG_TEXT_SECTION_PROTECTION
+#ifdef CONFIG_TEXT_SECTION_PROTECTION
 #include "../drivers/misc/pt.h"
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>

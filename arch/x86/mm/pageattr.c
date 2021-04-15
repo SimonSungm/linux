@@ -29,6 +29,10 @@
 
 #include "mm_internal.h"
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 /*
  * The current flushing context - we pass it instead of 5 arguments:
  */
@@ -1203,7 +1207,7 @@ static int alloc_pte_page(pmd_t *pmd)
 {
 	pte_t *pte = (pte_t *)pgp_ro_alloc(); 
 	if(!pte) {
-		printk("[PGP]: pte allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: pte allocation fail, use normal alloctor instead\n");
 		pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
 	}
 		
@@ -1230,7 +1234,7 @@ static int alloc_pmd_page(pud_t *pud)
 {
 	pmd_t *pmd = (pmd_t *)pgp_ro_alloc(); 
 	if(!pmd) {
-		printk("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
 		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
 	}
 
@@ -1441,7 +1445,7 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
 		p4d = (p4d_t *)pgp_ro_alloc();
 		if(!p4d){
-			printk("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
 			p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -1461,7 +1465,7 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 		pud = (pud_t *)pgp_ro_alloc();
 		if(!pud){
-			printk("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
 			pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else

@@ -28,6 +28,10 @@
 #include <asm/setup.h>
 #include <asm/set_memory.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 #ifdef CONFIG_ACPI
 /*
  * Used while adding mapping for ACPI tables.
@@ -138,7 +142,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
 		p4d = (p4d_t *)pgp_ro_alloc();
 		if(!p4d){
-			printk("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
 			p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -154,7 +158,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 		pud = (pud_t *)pgp_ro_alloc();
 		if(!pud){
-			printk("[PGP]: pud allocation fail, use normal alloctor instead\n");
+			PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
 			pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -170,7 +174,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
 		pmd = (pmd_t *)pgp_ro_alloc();
 		if(!pmd){
-			printk("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+			PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
 			pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -186,7 +190,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 		pte = (pte_t *)pgp_ro_alloc();
 		if(!pte){
-			printk("[PGP]: pte allocation fail, use normal alloctor instead\n");
+			PGP_WARNING("[PGP]: pte allocation fail, use normal alloctor instead\n");
 			pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else

@@ -8,6 +8,10 @@
 #include <asm/fixmap.h>
 #include <asm/mtrr.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 #ifdef CONFIG_DYNAMIC_PHYSICAL_MASK
 phys_addr_t physical_mask __ro_after_init = (1ULL << __PHYSICAL_MASK_SHIFT) - 1;
 EXPORT_SYMBOL(physical_mask);
@@ -423,7 +427,7 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	pgd = (pgd_t *)pgp_ro_alloc();
 	if(pgd == NULL){
-		printk("[PGP]: pgd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: pgd allocation fail, use normal alloctor instead\n");
 		pgd = _pgd_alloc();
 	}
 #else
@@ -465,7 +469,7 @@ out_free_pmds:
 out_free_pgd:
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	if(!pgp_ro_free((void *)pgd)) {
-		printk("[PGP]: pgd free fail, not a pgp page\n");
+		PGP_WARNING("[PGP]: pgd free fail, not a pgp page\n");
 		_pgd_free(pgd);
 	}
 #else
@@ -482,7 +486,7 @@ void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 	paravirt_pgd_free(mm, pgd);		// nothing need to do in non para-virt mode
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	if(!pgp_ro_free((void *)pgd)) {
-		printk("[PGP]: pgd free fail, not a pgp page\n");
+		PGP_WARNING("[PGP]: pgd free fail, not a pgp page\n");
 		_pgd_free(pgd);
 	}
 #else

@@ -28,6 +28,10 @@ static inline void paravirt_release_pud(unsigned long pfn) {}
 static inline void paravirt_release_p4d(unsigned long pfn) {}
 #endif
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 /*
  * Flags to use when allocating a user page table page.
  */
@@ -95,7 +99,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 	pmd = pgp_ro_alloc();
 	if (!pmd) {
-		printk("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
 			gfp &= ~__GFP_ACCOUNT;
 		page = alloc_pages(gfp, 0);
@@ -108,7 +112,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 		return (pmd_t *)page_address(page);
 	}
 	if (!pgtable_pmd_page_ctor(virt_to_page(pmd))) {			// the ro buffer should not be vmalloc area
-			pgp_ro_free((void *pmd));
+			pgp_ro_free((void *)pmd);
 		return NULL;
 	}
 	return pmd;
@@ -134,8 +138,8 @@ static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
 	BUG_ON((unsigned long)pmd & (PAGE_SIZE-1));
 	pgtable_pmd_page_dtor(virt_to_page(pmd));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
-	if(!pgp_ro_free((void *pmd))) {
-		printk("[PGP]: pmd free fail, not a pgp page\n");
+	if(!pgp_ro_free((void *)pmd)) {
+		PGP_WARNING("[PGP]: pmd free fail, not a pgp page\n");
 		free_page((unsigned long)pmd);
 	}
 #else
@@ -186,9 +190,9 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 	pud_t *pud;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
-	put = (pud_t *)pgp_ro_zero_alloc();
+	pud = (pud_t *)pgp_ro_zero_alloc();
 	if(!pud){
-		printk("[PGP]: pud allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
 			gfp &= ~__GFP_ACCOUNT;
 		return (pud_t *)get_zeroed_page(gfp);
@@ -208,7 +212,7 @@ static inline void pud_free(struct mm_struct *mm, pud_t *pud)
 	BUG_ON((unsigned long)pud & (PAGE_SIZE-1));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 	if(!pgp_ro_free((void *)pud)) {
-		printk("[PGP]: pud free fail, not a pgp page\n");
+		PGP_WARNING("[PGP]: pud free fail, not a pgp page\n");
 		free_page((unsigned long)pud);
 	}
 #else
@@ -249,7 +253,7 @@ static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 	p4d = pgp_ro_zero_alloc();
 	if(!p4d) {
-		printk("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
 			gfp &= ~__GFP_ACCOUNT;
 		return (p4d_t *)get_zeroed_page(gfp);
@@ -272,7 +276,7 @@ static inline void p4d_free(struct mm_struct *mm, p4d_t *p4d)
 	BUG_ON((unsigned long)p4d & (PAGE_SIZE-1));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 	if(pgp_ro_free((void *)p4d)) {
-		printk("[PGP]: pud free fail, not a pgp page\n");
+		PGP_WARNING("[PGP]: pud free fail, not a pgp page\n");
 		free_page((unsigned long)p4d);
 	}
 #else

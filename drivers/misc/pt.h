@@ -40,9 +40,18 @@
  * As this is never called on a CPU without VM extensions,
  * we assume that where VMCALL isn't available, VMMCALL is.
  */
+#ifndef _PT_H
+#define _PT_H
 
 #include <linux/types.h>
 #include <linux/list.h>
+
+struct px_memory_region {
+	unsigned long start;
+	unsigned long end;
+	struct list_head list;
+	char *name;
+};
 
 #define JAILHOUSE_HC_DISABLE			0
 #define JAILHOUSE_HC_CELL_CREATE		1
@@ -54,17 +63,12 @@
 #define JAILHOUSE_HC_CPU_GET_INFO		7
 #define JAILHOUSE_HC_DEBUG_CONSOLE_PUTC		8
 #define JAILHOUSE_HC_GPHYS2PHYS_PXN 	9
+#define JAILHOUSE_HC_WRITE_LONG		10
+#define JAILHOUSE_HC_MEMCPY	0x80000000
+#define JAILHOUSE_HC_MEMSET	0xC0000000
 
-
-struct px_memory_region {
-	unsigned long start;
-	unsigned long end;
-	struct list_head list;
-	char *name;
-};
-
-int pt_add_mem_region_size(unsigned long start, unsigned long size, char *name);
 int pt_add_mem_region(unsigned long start, unsigned long end, char *name);
+int pt_add_mem_region_size(unsigned long start, unsigned long size, char *name);
 
 #ifdef CONFIG_X86
 extern bool jailhouse_use_vmcall;
@@ -107,7 +111,7 @@ extern bool jailhouse_use_vmcall;
  *
  * @return Result of the hypercall, semantic depends on the invoked service.
  */
-static inline __u32 jailhouse_call(__u32 num)
+static inline __u32 jailhouse_call_custom(__u32 num)
 {
 	__u32 result;
 
@@ -125,7 +129,7 @@ static inline __u32 jailhouse_call(__u32 num)
  *
  * @return Result of the hypercall, semantic depends on the invoked service.
  */
-static inline __u32 jailhouse_call_arg1(__u32 num, unsigned long arg1)
+static inline __u32 jailhouse_call_arg1_custom(__u32 num, unsigned long arg1)
 {
 	__u32 result;
 
@@ -145,7 +149,7 @@ static inline __u32 jailhouse_call_arg1(__u32 num, unsigned long arg1)
  *
  * @return Result of the hypercall, semantic depends on the invoked service.
  */
-static inline __u32 jailhouse_call_arg2(__u32 num, unsigned long arg1,
+static inline __u32 jailhouse_call_arg2_custom(__u32 num, unsigned long arg1,
 					unsigned long arg2)
 {
 	__u32 result;
@@ -166,7 +170,7 @@ static inline __u32 jailhouse_call_arg2(__u32 num, unsigned long arg1,
 #define JAILHOUSE_CALL_ARG2		"x2"
 #define JAILHOUSE_CALL_CLOBBERED	"x3"
 
-static inline u32 jailhouse_call(u32 num)
+static inline u32 jailhouse_call_custom(u32 num)
 {
 	register u32 num_result asm(JAILHOUSE_CALL_NUM_RESULT) = num;
 
@@ -178,7 +182,7 @@ static inline u32 jailhouse_call(u32 num)
 	return num_result;
 }
 
-static inline u32 jailhouse_call_arg1(u32 num, u32 arg1)
+static inline u32 jailhouse_call_arg1_custom(u32 num, u32 arg1)
 {
 	register u32 num_result asm(JAILHOUSE_CALL_NUM_RESULT) = num;
 	register u32 __arg1 asm(JAILHOUSE_CALL_ARG1) = arg1;
@@ -190,7 +194,7 @@ static inline u32 jailhouse_call_arg1(u32 num, u32 arg1)
 	return num_result;
 }
 
-static inline u32 jailhouse_call_arg2(u32 num, u32 arg1,
+static inline u32 jailhouse_call_arg2_custom(u32 num, u32 arg1,
 					   u32 arg2)
 {
 	register u32 num_result asm(JAILHOUSE_CALL_NUM_RESULT) = num;
@@ -205,3 +209,4 @@ static inline u32 jailhouse_call_arg2(u32 num, u32 arg1,
 }
 #endif
 /** @} **/
+#endif
