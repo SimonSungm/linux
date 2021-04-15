@@ -4,7 +4,7 @@
 #include <linux/types.h>
 #include <asm/bug.h>
 #include <asm/io.h>
-#include "../../drivers/misc/pt.h"
+#include <linux/pt.h>
 
 /* defined in init/main.c */
 #define PGP_RO_BUF_BASE 0x100000000

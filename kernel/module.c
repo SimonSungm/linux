@@ -57,7 +57,7 @@
 #include "module-internal.h"
 
 #ifdef CONFIG_TEXT_SECTION_PROTECTION
-#include "../drivers/misc/pt.h"
+#include <linux/pt.h>
 #endif
 
 #define CREATE_TRACE_POINTS

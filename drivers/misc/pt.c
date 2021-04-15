@@ -12,7 +12,7 @@
 #include <asm/io.h>
 #include <linux/list.h>
 
-#include "pt.h"
+#include <linux/pt.h>
 
 #define MAX_SIZE 4096
 
