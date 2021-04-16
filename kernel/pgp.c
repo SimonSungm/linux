@@ -43,33 +43,10 @@ EXPORT_SYMBOL(pgp_ro_alloc);
 
 void *pgp_ro_zero_alloc(void)
 {
-	unsigned long flags;
-	unsigned int i = 0;
 	void *alloc_addr = NULL;
-	bool found = false;
-
-	if(!pgp_ro_buf_ready)
-		return alloc_addr;
-	spin_lock_irqsave(&ro_pgp_pages_lock,flags);
-	while(i < PGP_RO_PAGES) {
-		if(ro_pages_stat[ro_alloc_avail] == false) {
-			found = true;
-			if(i == PGP_RO_PAGES - 1) {
-				pr_err("Ro buf slot is last one\n");
-			}
-			break;
-		}
-		ro_alloc_avail = (ro_alloc_avail + 1) % PGP_RO_PAGES;
-		i++;
-	}
-	if(found) {
-		alloc_addr = (void *)((u64)(PGP_ROBUF_VA) + (ro_alloc_avail << PAGE_SHIFT));
-		ro_pages_stat[ro_alloc_avail] = true;
-		ro_alloc_avail = (ro_alloc_avail + 1) % PGP_RO_PAGES;
-	}
-	spin_unlock_irqrestore(&ro_pgp_pages_lock,flags);
-
-	pgp_memset(alloc_addr, 0, PAGE_SIZE);
+	alloc_addr = pgp_ro_alloc();
+	if(alloc_addr != NULL)
+		pgp_memset(alloc_addr, 0, PAGE_SIZE);
 	return alloc_addr;
 }
 EXPORT_SYMBOL(pgp_ro_zero_alloc);
