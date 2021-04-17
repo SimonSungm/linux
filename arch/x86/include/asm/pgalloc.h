@@ -97,7 +97,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	struct page *page;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT | __GFP_ZERO;
 
-	pmd = pgp_ro_alloc();
+	pmd = pgp_ro_zero_alloc();
 	if (!pmd) {
 		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
