@@ -231,7 +231,7 @@ static __ref void *spp_getpage(void)
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
 	if (after_bootmem){
-		ptr = pgp_ro_zero_alloc();
+		ptr = pgp_ro_zalloc();
 		if(!ptr) {
 			PGP_WARNING("[PGP]: spp allocation fail, use normal alloctor instead\n");
 			ptr = (void *) get_zeroed_page(GFP_ATOMIC);

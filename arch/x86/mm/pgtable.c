@@ -425,7 +425,7 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 	pmd_t *pmds[MAX_PREALLOCATED_PMDS];
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
-	pgd = (pgd_t *)pgp_ro_alloc();
+	pgd = (pgd_t *)pgp_ro_zalloc();
 	if(pgd == NULL){
 		PGP_WARNING("[PGP]: pgd allocation fail, use normal alloctor instead\n");
 		pgd = _pgd_alloc();

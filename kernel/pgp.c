@@ -41,7 +41,7 @@ void *pgp_ro_alloc(void)
 }
 EXPORT_SYMBOL(pgp_ro_alloc);
 
-void *pgp_ro_zero_alloc(void)
+void *pgp_ro_zalloc(void)
 {
 	void *alloc_addr = NULL;
 	alloc_addr = pgp_ro_alloc();
@@ -49,7 +49,7 @@ void *pgp_ro_zero_alloc(void)
 		pgp_memset(alloc_addr, 0, PAGE_SIZE);
 	return alloc_addr;
 }
-EXPORT_SYMBOL(pgp_ro_zero_alloc);
+EXPORT_SYMBOL(pgp_ro_zalloc);
 
 /* 
  * 

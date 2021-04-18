@@ -97,7 +97,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	struct page *page;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT | __GFP_ZERO;
 
-	pmd = pgp_ro_zero_alloc();
+	pmd = pgp_ro_zalloc();
 	if (!pmd) {
 		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
@@ -190,7 +190,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 	pud_t *pud;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
-	pud = (pud_t *)pgp_ro_zero_alloc();
+	pud = (pud_t *)pgp_ro_zalloc();
 	if(!pud){
 		PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
@@ -251,7 +251,7 @@ static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
 	p4d_t *p4d;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
-	p4d = pgp_ro_zero_alloc();
+	p4d = pgp_ro_zalloc();
 	if(!p4d) {
 		PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)

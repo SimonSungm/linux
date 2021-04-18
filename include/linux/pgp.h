@@ -25,7 +25,7 @@
 
 /* defined in kernel/pgp.c */
 void *pgp_ro_alloc(void);
-void *pgp_ro_zero_alloc(void);
+void *pgp_ro_zalloc(void);
 bool pgp_ro_free(void* addr);
 void pgp_memcpy(void *dst, const void *src, size_t len);
 void pgp_memset(void *dst, char n, size_t len);
