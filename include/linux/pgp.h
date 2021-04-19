@@ -7,7 +7,7 @@
 #include <linux/pt.h>
 
 /* defined in init/main.c */
-#define PGP_RO_BUF_BASE 0x100000000
+#define PGP_RO_BUF_BASE 0x10000000
 
 #define __DEBUG_PAGE_TABLE_PROTECTION
 

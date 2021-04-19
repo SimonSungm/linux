@@ -529,13 +529,13 @@ extern bool pgp_ro_buf_ready;
 
 static void pgp_init(void)
 {
-	void *ret;
+	// void *ret;
 	printk("[PGP] ###### PAGE_TABLE_PROTECTION: pgp_init ######\n");
-	ret = memremap(PGP_RO_BUF_BASE, PGP_ROBUF_SIZE, MEMREMAP_WB);
-	if(ret != (void *)phys_to_virt((phys_addr_t)PGP_RO_BUF_BASE)) {
-		panic("[PGP] ###### memrep virt addr: 0x%016lx, expected virt addr: 0x%016lx ###### \n", 
-				(unsigned long)ret, (unsigned long)phys_to_virt(PGP_RO_BUF_BASE));
-	}
+	// ret = memremap(PGP_RO_BUF_BASE, PGP_ROBUF_SIZE, MEMREMAP_WB);
+	// if(ret != (void *)phys_to_virt((phys_addr_t)PGP_RO_BUF_BASE)) {
+	// 	panic("[PGP] ###### memrep virt addr: 0x%016lx, expected virt addr: 0x%016lx ###### \n", 
+	// 			(unsigned long)ret, (unsigned long)phys_to_virt(PGP_RO_BUF_BASE));
+	// }
 	memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
 	pgp_ro_buf_ready = true;
 	// For test
