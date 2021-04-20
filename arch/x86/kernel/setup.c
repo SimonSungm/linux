@@ -857,7 +857,9 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	memblock_reserve(__pa_symbol(_text),
 			 (unsigned long)__end_of_kernel_reserve - (unsigned long)_text);
-
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	memblock_reserve(PGP_RO_BUF_BASE, PGP_ROBUF_SIZE);
+#endif
 	/*
 	 * Make sure page 0 is always reserved because on systems with
 	 * L1TF its contents can be leaked to user processes.
