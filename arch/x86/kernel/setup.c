@@ -172,7 +172,7 @@ static struct resource bss_resource = {
 static struct resource pgp_resource = {
 	.name = "PGP mem pool",
 	.start = PGP_RO_BUF_BASE,
-	.end = PGP_RO_BUF_BASE + PGP_ROBUF_SIZE,
+	.end = PGP_RO_BUF_BASE + PGP_ROBUF_SIZE - 1,
 	.flags = IORESOURCE_BUSY | IORESOURCE_SYSTEM_RAM
 };
 #endif
