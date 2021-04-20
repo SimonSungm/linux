@@ -20,19 +20,45 @@ static struct kmem_cache *pgd_cache __ro_after_init;
 pgd_t *pgd_alloc(struct mm_struct *mm)
 {
 	gfp_t gfp = GFP_PGTABLE_USER;
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	pgd_t* pgd;
+	pgd=(pgd_t *)pgp_ro_alloc();
+	if(!pgd)
+	{
+		printk("[PGP]: pgd allocation fail, use normal alloctor instead\n");
+		if (PGD_SIZE == PAGE_SIZE)
+			return (pgd_t *)__get_free_page(gfp);
+		else
+			return kmem_cache_alloc(pgd_cache, gfp);
+	}
+	return pgd;
 
+#else
 	if (PGD_SIZE == PAGE_SIZE)
 		return (pgd_t *)__get_free_page(gfp);
 	else
 		return kmem_cache_alloc(pgd_cache, gfp);
+#endif
 }
 
 void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
+
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	if(pgp_ro_free(void* pgd))
+	{
+		printk("[PGP]: pgd free fail, not a pgp page\n");
+		if (PGD_SIZE == PAGE_SIZE)
+			free_page((unsigned long)pgd);
+		else
+			kmem_cache_free(pgd_cache, pgd);
+	}
+#else
 	if (PGD_SIZE == PAGE_SIZE)
 		free_page((unsigned long)pgd);
 	else
 		kmem_cache_free(pgd_cache, pgd);
+#endif
 }
 
 void __init pgtable_cache_init(void)
