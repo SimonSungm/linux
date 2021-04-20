@@ -125,14 +125,24 @@ extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
 
 static inline pte_t clear_pte_bit(pte_t pte, pgprot_t prot)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	pte_val(pte) &= ~pgprot_val(prot);
 	return pte;
+#else
+	pte_val(pte) &= ~pgprot_val(prot);
+	return pte;
+#endif
 }
 
 static inline pte_t set_pte_bit(pte_t pte, pgprot_t prot)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	pte_val(pte) |= pgprot_val(prot);
 	return pte;
+#else
+	pte_val(pte) |= pgprot_val(prot);
+	return pte;
+#endif
 }
 
 static inline pte_t pte_wrprotect(pte_t pte)
@@ -210,6 +220,7 @@ static inline pte_t pte_mkdevmap(pte_t pte)
 
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	WRITE_ONCE(*ptep, pte);
 
 	/*
@@ -220,6 +231,18 @@ static inline void set_pte(pte_t *ptep, pte_t pte)
 		dsb(ishst);
 		isb();
 	}
+#else 
+	WRITE_ONCE(*ptep, pte);
+
+	/*
+	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
+	 * or update_mmu_cache() have the necessary barriers.
+	 */
+	if (pte_valid_not_user(pte)) {
+		dsb(ishst);
+		isb();
+	}
+#endif
 }
 
 extern void __sync_icache_dcache(pte_t pteval);
@@ -469,6 +492,7 @@ static inline bool in_swapper_pgdir(void *addr)
 
 static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
 #ifdef __PAGETABLE_PMD_FOLDED
 	if (in_swapper_pgdir(pmdp)) {
 		set_swapper_pgd((pgd_t *)pmdp, __pgd(pmd_val(pmd)));
@@ -482,6 +506,21 @@ static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 		dsb(ishst);
 		isb();
 	}
+#else
+#ifdef __PAGETABLE_PMD_FOLDED
+	if (in_swapper_pgdir(pmdp)) {
+		set_swapper_pgd((pgd_t *)pmdp, __pgd(pmd_val(pmd)));
+		return;
+	}
+#endif /* __PAGETABLE_PMD_FOLDED */
+
+	WRITE_ONCE(*pmdp, pmd);
+
+	if (pmd_valid(pmd)) {
+		dsb(ishst);
+		isb();
+	}
+#endif
 }
 
 static inline void pmd_clear(pmd_t *pmdp)
@@ -530,6 +569,8 @@ static inline void pte_unmap(pte_t *pte) { }
 
 static inline void set_pud(pud_t *pudp, pud_t pud)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+#else 
 #ifdef __PAGETABLE_PUD_FOLDED
 	if (in_swapper_pgdir(pudp)) {
 		set_swapper_pgd((pgd_t *)pudp, __pgd(pud_val(pud)));
@@ -543,6 +584,7 @@ static inline void set_pud(pud_t *pudp, pud_t pud)
 		dsb(ishst);
 		isb();
 	}
+#endif
 }
 
 static inline void pud_clear(pud_t *pudp)
@@ -593,6 +635,7 @@ static inline phys_addr_t pud_page_paddr(pud_t pud)
 
 static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	if (in_swapper_pgdir(pgdp)) {
 		set_swapper_pgd(pgdp, pgd);
 		return;
@@ -601,6 +644,16 @@ static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 	WRITE_ONCE(*pgdp, pgd);
 	dsb(ishst);
 	isb();
+#else
+	if (in_swapper_pgdir(pgdp)) {
+		set_swapper_pgd(pgdp, pgd);
+		return;
+	}
+
+	WRITE_ONCE(*pgdp, pgd);
+	dsb(ishst);
+	isb();
+#endif
 }
 
 static inline void pgd_clear(pgd_t *pgdp)
