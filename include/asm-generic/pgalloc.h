@@ -18,7 +18,18 @@
  */
 static inline pte_t *__pte_alloc_one_kernel(struct mm_struct *mm)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	pte_t *pte;
+	
+	pte = (pte_t *)pgp_ro_alloc();
+	if (!pte) {
+		printk("[PGP]: pte allocation fail, use normal alloctor instead\n");
+		return (pte_t *)__get_free_page(GFP_PGTABLE_KERNEL);
+	}
+	return pte;
+#else
 	return (pte_t *)__get_free_page(GFP_PGTABLE_KERNEL);
+#endif
 }
 
 #ifndef __HAVE_ARCH_PTE_ALLOC_ONE_KERNEL
@@ -41,7 +52,14 @@ static inline pte_t *pte_alloc_one_kernel(struct mm_struct *mm)
  */
 static inline void pte_free_kernel(struct mm_struct *mm, pte_t *pte)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	if (!pgp_ro_free((void *)pte)) {
+		printk("[PGP]: pte free fail, not a pgp page\n");
+		free_page((unsigned long)pte);
+	}
+#else
 	free_page((unsigned long)pte);
+#endif
 }
 
 /**
