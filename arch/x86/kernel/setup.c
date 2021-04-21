@@ -74,6 +74,10 @@
 #include <linux/mem_encrypt.h>
 #include <linux/sizes.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 #include <linux/usb/xhci-dbgp.h>
 #include <video/edid.h>
 
@@ -163,6 +167,15 @@ static struct resource bss_resource = {
 	.end	= 0,
 	.flags	= IORESOURCE_BUSY | IORESOURCE_SYSTEM_RAM
 };
+
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+static struct resource pgp_resource = {
+	.name = "PGP mem pool",
+	.start = PGP_RO_BUF_BASE,
+	.end = PGP_RO_BUF_BASE + PGP_ROBUF_SIZE - 1,
+	.flags = IORESOURCE_BUSY | IORESOURCE_SYSTEM_RAM
+};
+#endif
 
 
 #ifdef CONFIG_X86_32
@@ -844,7 +857,9 @@ void __init setup_arch(char **cmdline_p)
 	 */
 	memblock_reserve(__pa_symbol(_text),
 			 (unsigned long)__end_of_kernel_reserve - (unsigned long)_text);
-
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	memblock_reserve(PGP_RO_BUF_BASE, PGP_ROBUF_SIZE);
+#endif
 	/*
 	 * Make sure page 0 is always reserved because on systems with
 	 * L1TF its contents can be leaked to user processes.
@@ -1042,6 +1057,9 @@ void __init setup_arch(char **cmdline_p)
 	insert_resource(&iomem_resource, &code_resource);
 	insert_resource(&iomem_resource, &data_resource);
 	insert_resource(&iomem_resource, &bss_resource);
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	insert_resource(&iomem_resource, &pgp_resource);
+#endif
 
 	e820_add_kernel_range();
 	trim_bios_range();

@@ -59,6 +59,10 @@
 
 #include "ident_map.c"
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 #define DEFINE_POPULATE(fname, type1, type2, init)		\
 static inline void fname##_init(struct mm_struct *mm,		\
 		type1##_t *arg1, type2##_t *arg2, bool init)	\
@@ -225,8 +229,18 @@ static __ref void *spp_getpage(void)
 {
 	void *ptr;
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	if (after_bootmem){
+		ptr = pgp_ro_zalloc();
+		if(!ptr) {
+			PGP_WARNING("[PGP]: spp allocation fail, use normal alloctor instead\n");
+			ptr = (void *) get_zeroed_page(GFP_ATOMIC);
+		}
+	}
+#else
 	if (after_bootmem)
 		ptr = (void *) get_zeroed_page(GFP_ATOMIC);
+#endif
 	else
 		ptr = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
 

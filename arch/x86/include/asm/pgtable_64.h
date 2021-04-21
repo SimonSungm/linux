@@ -7,6 +7,10 @@
 
 #ifndef __ASSEMBLY__
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 /*
  * This file contains the functions and defines necessary to modify and use
  * the x86-64 page table tree.
@@ -56,10 +60,22 @@ struct mm_struct;
 void set_pte_vaddr_p4d(p4d_t *p4d_page, unsigned long vaddr, pte_t new_pte);
 void set_pte_vaddr_pud(pud_t *pud_page, unsigned long vaddr, pte_t new_pte);
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+static inline void native_set_pte(pte_t *ptep, pte_t pte)
+{
+	if(is_pgp_ro_page((u64)ptep)){
+		PGP_WRITE_ONCE(ptep, native_pte_val(pte));
+	} else {
+		//PGP_WARNING("set pte of non ro page");
+		WRITE_ONCE(*ptep, pte);
+	}
+}
+#else 
 static inline void native_set_pte(pte_t *ptep, pte_t pte)
 {
 	WRITE_ONCE(*ptep, pte);
 }
+#endif
 
 static inline void native_pte_clear(struct mm_struct *mm, unsigned long addr,
 				    pte_t *ptep)
@@ -72,16 +88,36 @@ static inline void native_set_pte_atomic(pte_t *ptep, pte_t pte)
 	native_set_pte(ptep, pte);
 }
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+static inline void native_set_pmd(pmd_t *pmdp, pmd_t pmd)
+{
+	if(is_pgp_ro_page((u64)pmdp)){
+		PGP_WRITE_ONCE(pmdp, native_pmd_val(pmd));
+	} else {
+		//PGP_WARNING("set pmd of non ro page");
+		WRITE_ONCE(*pmdp, pmd);
+	}
+}
+#else
 static inline void native_set_pmd(pmd_t *pmdp, pmd_t pmd)
 {
 	WRITE_ONCE(*pmdp, pmd);
 }
+#endif
 
 static inline void native_pmd_clear(pmd_t *pmd)
 {
 	native_set_pmd(pmd, native_make_pmd(0));
 }
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+static inline pte_t native_ptep_get_and_clear(pte_t *xp)
+{
+	pte_t ret = READ_ONCE(*xp);
+	native_pte_clear(NULL, 0, xp);
+	return ret;
+}
+#else 
 static inline pte_t native_ptep_get_and_clear(pte_t *xp)
 {
 #ifdef CONFIG_SMP
@@ -94,7 +130,16 @@ static inline pte_t native_ptep_get_and_clear(pte_t *xp)
 	return ret;
 #endif
 }
+#endif
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+static inline pmd_t native_pmdp_get_and_clear(pmd_t *xp)
+{
+	pmd_t ret = READ_ONCE(*xp);
+	native_pmd_clear(xp);
+	return ret;
+}
+#else
 static inline pmd_t native_pmdp_get_and_clear(pmd_t *xp)
 {
 #ifdef CONFIG_SMP
@@ -107,17 +152,38 @@ static inline pmd_t native_pmdp_get_and_clear(pmd_t *xp)
 	return ret;
 #endif
 }
+#endif
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+static inline void native_set_pud(pud_t *pudp, pud_t pud)
+{
+	if(is_pgp_ro_page((u64)pudp)){
+		PGP_WRITE_ONCE(pudp, native_pud_val(pud));
+	} else {
+		//PGP_WARNING("set pud of non ro page");
+		WRITE_ONCE(*pudp, pud);
+	}
+}
+#else
 static inline void native_set_pud(pud_t *pudp, pud_t pud)
 {
 	WRITE_ONCE(*pudp, pud);
 }
+#endif
 
 static inline void native_pud_clear(pud_t *pud)
 {
 	native_set_pud(pud, native_make_pud(0));
 }
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+static inline pud_t native_pudp_get_and_clear(pud_t *xp)
+{
+	pud_t ret = READ_ONCE(*xp);
+	native_pud_clear(xp);
+	return ret;
+}
+#else
 static inline pud_t native_pudp_get_and_clear(pud_t *xp)
 {
 #ifdef CONFIG_SMP
@@ -132,7 +198,33 @@ static inline pud_t native_pudp_get_and_clear(pud_t *xp)
 	return ret;
 #endif
 }
+#endif
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
+{
+	pgd_t pgd;
+
+	if (pgtable_l5_enabled() || !IS_ENABLED(CONFIG_PAGE_TABLE_ISOLATION)) {
+		if(is_pgp_ro_page((u64)p4dp)){
+			PGP_WRITE_ONCE(p4dp, native_p4d_val(p4d));
+		} else {
+			//PGP_WARNING("set p4d of non ro page");
+			WRITE_ONCE(*p4dp, p4d);
+		}
+		return;
+	}
+
+	pgd = native_make_pgd(native_p4d_val(p4d));
+	pgd = pti_set_user_pgtbl((pgd_t *)p4dp, pgd);
+	if(is_pgp_ro_page((u64)p4dp)){
+		PGP_WRITE_ONCE(p4dp, native_pgd_val(pgd));
+	} else {
+		//PGP_WARNING("set p4d of non ro page");
+		WRITE_ONCE(*p4dp, native_make_p4d(native_pgd_val(pgd)));
+	}
+}
+#else
 static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
 {
 	pgd_t pgd;
@@ -146,16 +238,29 @@ static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
 	pgd = pti_set_user_pgtbl((pgd_t *)p4dp, pgd);
 	WRITE_ONCE(*p4dp, native_make_p4d(native_pgd_val(pgd)));
 }
+#endif
 
 static inline void native_p4d_clear(p4d_t *p4d)
 {
 	native_set_p4d(p4d, native_make_p4d(0));
 }
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+static inline void native_set_pgd(pgd_t *pgdp, pgd_t pgd)
+{
+	if(is_pgp_ro_page((u64)pgdp)){
+		PGP_WRITE_ONCE(pgdp, native_pgd_val(pti_set_user_pgtbl(pgdp, pgd)));
+	} else {
+		//PGP_WARNING("set pgd of non ro page");
+		WRITE_ONCE(*pgdp, pti_set_user_pgtbl(pgdp, pgd));
+	}
+}
+#else
 static inline void native_set_pgd(pgd_t *pgdp, pgd_t pgd)
 {
 	WRITE_ONCE(*pgdp, pti_set_user_pgtbl(pgdp, pgd));
 }
+#endif
 
 static inline void native_pgd_clear(pgd_t *pgd)
 {

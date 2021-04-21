@@ -56,6 +56,10 @@
 #include <uapi/linux/module.h>
 #include "module-internal.h"
 
+#ifdef CONFIG_TEXT_SECTION_PROTECTION
+#include <linux/pt.h>
+#endif
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/module.h>
 
@@ -3653,6 +3657,10 @@ static noinline int do_init_module(struct module *mod)
 	mod->init_layout.ro_size = 0;
 	mod->init_layout.ro_after_init_size = 0;
 	mod->init_layout.text_size = 0;
+
+#ifdef CONFIG_TEXT_SECTION_PROTECTION
+	pt_add_mem_region_size(__pa(mod->core_layout.base), mod->core_layout.text_size, mod->name);
+#endif
 	/*
 	 * We want to free module_init, but be aware that kallsyms may be
 	 * walking this with preempt disabled.  In all the failure paths, we
