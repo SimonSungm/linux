@@ -22,10 +22,11 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 	gfp_t gfp = GFP_PGTABLE_USER;
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	pgd_t* pgd;
-	pgd=(pgd_t *)pgp_ro_alloc();
+	if (PGD_SIZE == PAGE_SIZE)
+		pgd=(pgd_t *)pgp_ro_alloc();
 	if(!pgd)
 	{
-		printk("[PGP]: pgd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING("[PGP]: pgd allocation fail, use normal alloctor instead\n");
 		if (PGD_SIZE == PAGE_SIZE)
 			return (pgd_t *)__get_free_page(gfp);
 		else
@@ -45,9 +46,9 @@ void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
-	if(pgp_ro_free(void* pgd))
+	if(!pgp_ro_free((void*) pgd))
 	{
-		printk("[PGP]: pgd free fail, not a pgp page\n");
+		PGP_WARNING("[PGP]: pgd free fail, not a pgp page\n");
 		if (PGD_SIZE == PAGE_SIZE)
 			free_page((unsigned long)pgd);
 		else
