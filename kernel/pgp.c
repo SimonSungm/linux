@@ -103,7 +103,7 @@ void pgp_memcpy(void *dst, const void *src, size_t len)
 #ifdef __DEBUG_PAGE_TABLE_PROTECTION
 		memcpy(dst, src, len);
 #else
-		jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMCPY | len, virt_to_phys(dst), src);
+		jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMCPY | len, virt_to_phys(dst), virt_to_phys(src));
 #endif
     } else {
         memcpy(dst, src, len);
