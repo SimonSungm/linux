@@ -64,7 +64,7 @@ void set_pte_vaddr_pud(pud_t *pud_page, unsigned long vaddr, pte_t new_pte);
 static inline void native_set_pte(pte_t *ptep, pte_t pte)
 {
 	if(is_pgp_ro_page((u64)ptep)){
-		PGP_WRITE_ONCE(ptep, pte);
+		PGP_WRITE_ONCE(ptep, native_pte_val(pte));
 	} else {
 		//PGP_WARNING("set pte of non ro page");
 		WRITE_ONCE(*ptep, pte);
@@ -92,7 +92,7 @@ static inline void native_set_pte_atomic(pte_t *ptep, pte_t pte)
 static inline void native_set_pmd(pmd_t *pmdp, pmd_t pmd)
 {
 	if(is_pgp_ro_page((u64)pmdp)){
-		PGP_WRITE_ONCE(pmdp, pmd);
+		PGP_WRITE_ONCE(pmdp, native_pmd_val(pmd));
 	} else {
 		//PGP_WARNING("set pmd of non ro page");
 		WRITE_ONCE(*pmdp, pmd);
@@ -158,7 +158,7 @@ static inline pmd_t native_pmdp_get_and_clear(pmd_t *xp)
 static inline void native_set_pud(pud_t *pudp, pud_t pud)
 {
 	if(is_pgp_ro_page((u64)pudp)){
-		PGP_WRITE_ONCE(pudp, pud);
+		PGP_WRITE_ONCE(pudp, native_pud_val(pud));
 	} else {
 		//PGP_WARNING("set pud of non ro page");
 		WRITE_ONCE(*pudp, pud);
@@ -207,7 +207,7 @@ static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
 
 	if (pgtable_l5_enabled() || !IS_ENABLED(CONFIG_PAGE_TABLE_ISOLATION)) {
 		if(is_pgp_ro_page((u64)p4dp)){
-			PGP_WRITE_ONCE(p4dp, p4d);
+			PGP_WRITE_ONCE(p4dp, native_p4d_val(p4d));
 		} else {
 			//PGP_WARNING("set p4d of non ro page");
 			WRITE_ONCE(*p4dp, p4d);
@@ -218,7 +218,7 @@ static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
 	pgd = native_make_pgd(native_p4d_val(p4d));
 	pgd = pti_set_user_pgtbl((pgd_t *)p4dp, pgd);
 	if(is_pgp_ro_page((u64)p4dp)){
-		PGP_WRITE_ONCE(p4dp, native_make_p4d(native_pgd_val(pgd)));
+		PGP_WRITE_ONCE(p4dp, native_pgd_val(pgd));
 	} else {
 		//PGP_WARNING("set p4d of non ro page");
 		WRITE_ONCE(*p4dp, native_make_p4d(native_pgd_val(pgd)));
@@ -249,7 +249,7 @@ static inline void native_p4d_clear(p4d_t *p4d)
 static inline void native_set_pgd(pgd_t *pgdp, pgd_t pgd)
 {
 	if(is_pgp_ro_page((u64)pgdp)){
-		PGP_WRITE_ONCE(pgdp, pti_set_user_pgtbl(pgdp, pgd));
+		PGP_WRITE_ONCE(pgdp, native_pgd_val(pti_set_user_pgtbl(pgdp, pgd)));
 	} else {
 		//PGP_WARNING("set pgd of non ro page");
 		WRITE_ONCE(*pgdp, pti_set_user_pgtbl(pgdp, pgd));

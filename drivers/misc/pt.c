@@ -22,7 +22,6 @@ static char msg[MAX_SIZE];
 extern char _stext[], _etext[];
 
 #ifdef CONFIG_X86_64
-bool jailhouse_use_vmcall = true;
 
 #define REGION_NUM 1
 struct px_memory_region machine_mem[REGION_NUM] = {
