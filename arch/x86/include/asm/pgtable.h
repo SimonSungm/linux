@@ -26,6 +26,10 @@
 #include <asm/fpu/xstate.h>
 #include <asm/fpu/api.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 extern pgd_t early_top_pgt[PTRS_PER_PGD];
 int __init __early_make_pgtable(unsigned long address, pmdval_t pmd);
 
@@ -1300,13 +1304,22 @@ static inline p4d_t *user_to_kernel_p4dp(p4d_t *p4dp)
  */
 static inline void clone_pgd_range(pgd_t *dst, pgd_t *src, int count)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	pgp_memcpy(dst, src, count * sizeof(pgd_t));
+#else
 	memcpy(dst, src, count * sizeof(pgd_t));
+#endif 
 #ifdef CONFIG_PAGE_TABLE_ISOLATION
 	if (!static_cpu_has(X86_FEATURE_PTI))
 		return;
 	/* Clone the user space pgd as well */
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	pgp_memcpy(kernel_to_user_pgdp(dst), kernel_to_user_pgdp(src),
+		count * sizeof(pgd_t));
+#else
 	memcpy(kernel_to_user_pgdp(dst), kernel_to_user_pgdp(src),
 	       count * sizeof(pgd_t));
+#endif
 #endif
 }
 
