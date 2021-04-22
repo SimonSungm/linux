@@ -20,11 +20,12 @@
 #define PGP_ROBUF_VA (phys_to_virt(PGP_RO_BUF_BASE))
 
 #ifdef __DEBUG_PAGE_TABLE_PROTECTION
-#define PGP_WARNING(format...) WARN(1==1, format)
-#define PGP_WRITE_ONCE(addr, value) WRITE_ONCE(*addr, value)
+#define PGP_WARNING(format...) printk(format)
+//#define PGP_WARNING(format...) WARN(true, format)
+#define PGP_WRITE_ONCE(addr, value) WRITE_ONCE(*(unsigned long *)addr, (unsigned long)value)
 #else
 #define PGP_WARNING(format...) 
-#define PGP_WRITE_ONCE(addr, value) pgp_write_long((unsigned long)addr, (unsigned long)value);
+#define PGP_WRITE_ONCE(addr, value) pgp_write_long(addr, (unsigned long)value);
 #endif
 
 /* defined in kernel/pgp.c */
@@ -36,6 +37,11 @@ void pgp_memset(void *dst, char n, size_t len);
 
 static inline bool is_pgp_ro_page(u64 addr)
 {
+#ifndef __DEBUG_PAGE_TABLE_PROTECTION
+	if(pgp_hyp_init == false)
+		return false;
+#endif
+
 	if ((addr >= (u64)PGP_ROBUF_VA)
 		&& (addr < (u64)(PGP_ROBUF_VA + PGP_ROBUF_SIZE)))
 		return true;

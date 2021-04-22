@@ -7,6 +7,8 @@ bool pgp_ro_buf_ready = false;
 spinlock_t ro_pgp_pages_lock = __SPIN_LOCK_UNLOCKED();
 static char ro_pages_stat[PGP_RO_PAGES] = {0};
 unsigned int ro_alloc_avail = 0;
+bool pgp_hyp_init = false;
+EXPORT_SYMBOL(pgp_hyp_init);
 
 
 void *pgp_ro_alloc(void)
@@ -92,6 +94,10 @@ void pgp_memset(void *dst, char n, size_t len)
 		jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMSET | len, virt_to_phys(dst), n);
 #endif
     } else {
+#ifndef __DEBUG_PAGE_TABLE_PROTECTION
+		if(pgp_hyp_init)
+#endif
+			WARN(true, "[PGP] pgp_memset fail at 0x%016lx", (unsigned long)dst);
         memset(dst, n, len);
     }
 }
@@ -103,9 +109,13 @@ void pgp_memcpy(void *dst, const void *src, size_t len)
 #ifdef __DEBUG_PAGE_TABLE_PROTECTION
 		memcpy(dst, src, len);
 #else
-		jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMCPY | len, virt_to_phys(dst), src);
+		jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMCPY | len, virt_to_phys(dst), virt_to_phys(src));
 #endif
     } else {
+#ifndef __DEBUG_PAGE_TABLE_PROTECTION
+		if(pgp_hyp_init) 
+#endif
+			WARN(true, "[PGP] pgp_memset fail from src 0x%016lx to dst 0x%016lx", (unsigned long)src, (unsigned long)dst);
         memcpy(dst, src, len);
     }
 }

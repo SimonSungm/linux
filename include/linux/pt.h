@@ -71,17 +71,10 @@ int pt_add_mem_region(unsigned long start, unsigned long end, char *name);
 int pt_add_mem_region_size(unsigned long start, unsigned long size, char *name);
 
 #ifdef CONFIG_X86
-extern bool jailhouse_use_vmcall;
 #define JAILHOUSE_CALL_CODE	\
-	"cmpb $0x01, %[use_vmcall]\n\t"\
-	"jne 1f\n\t"\
-	"vmcall\n\t"\
-	"jmp 2f\n\t"\
-	"1: vmmcall\n\t"\
-	"2:"
+	"vmcall"
 
 #define JAILHOUSE_CALL_RESULT	"=a" (result)
-#define JAILHOUSE_USE_VMCALL	[use_vmcall] "m" (jailhouse_use_vmcall)
 #define JAILHOUSE_CALL_NUM	"a" (num)
 #define JAILHOUSE_CALL_ARG1	"D" (arg1)
 #define JAILHOUSE_CALL_ARG2	"S" (arg2)
@@ -117,7 +110,7 @@ static inline __u32 jailhouse_call_custom(__u32 num)
 
 	asm volatile(JAILHOUSE_CALL_CODE
 		: JAILHOUSE_CALL_RESULT
-		: JAILHOUSE_USE_VMCALL, JAILHOUSE_CALL_NUM
+		: JAILHOUSE_CALL_NUM
 		: "memory");
 	return result;
 }
@@ -135,8 +128,7 @@ static inline __u32 jailhouse_call_arg1_custom(__u32 num, unsigned long arg1)
 
 	asm volatile(JAILHOUSE_CALL_CODE
 		: JAILHOUSE_CALL_RESULT
-		: JAILHOUSE_USE_VMCALL,
-		  JAILHOUSE_CALL_NUM, JAILHOUSE_CALL_ARG1
+		: JAILHOUSE_CALL_NUM, JAILHOUSE_CALL_ARG1
 		: "memory");
 	return result;
 }
@@ -156,8 +148,7 @@ static inline __u32 jailhouse_call_arg2_custom(__u32 num, unsigned long arg1,
 
 	asm volatile(JAILHOUSE_CALL_CODE
 		: JAILHOUSE_CALL_RESULT
-		: JAILHOUSE_USE_VMCALL,
-		  JAILHOUSE_CALL_NUM, JAILHOUSE_CALL_ARG1, JAILHOUSE_CALL_ARG2
+		: JAILHOUSE_CALL_NUM, JAILHOUSE_CALL_ARG1, JAILHOUSE_CALL_ARG2
 		: "memory");
 	return result;
 }
