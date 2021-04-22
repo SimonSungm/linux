@@ -105,8 +105,8 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 	{
 		PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
 		return (pud_t *)__get_free_page(GFP_PGTABLE_USER);
-
 	}
+	return pud;
 #else
 	return (pud_t *)__get_free_page(GFP_PGTABLE_USER);
 #endif

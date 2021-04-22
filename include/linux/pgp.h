@@ -7,8 +7,12 @@
 #include <linux/pt.h>
 
 /* defined in init/main.c */
+#ifdef CONFIG_X86_64
 #define PGP_RO_BUF_BASE 0x10000000
-
+#endif
+#ifdef CONFIG_ARM64
+#define PGP_RO_BUF_BASE (0x50000000)
+#endif
 #define __DEBUG_PAGE_TABLE_PROTECTION
 
 #define PGP_ROBUF_SIZE (0x10000000)
