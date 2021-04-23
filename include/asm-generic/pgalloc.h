@@ -24,7 +24,7 @@ static inline pte_t *__pte_alloc_one_kernel(struct mm_struct *mm)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	pte_t *pte;
 	
-	pte = (pte_t *)pgp_ro_alloc();
+	pte = (pte_t *)pgp_ro_zalloc();
 	if (!pte) {
 		PGP_WARNING("######[PGP]: pte allocation fail, use normal alloctor instead######\n");
 		return (pte_t *)__get_free_page(GFP_PGTABLE_KERNEL);

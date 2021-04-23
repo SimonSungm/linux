@@ -14,6 +14,7 @@
 #include <asm/tlbflush.h>
 
 #include <asm-generic/pgalloc.h>	/* for pte_{alloc,free}_one */
+
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
 #include <linux/pgp.h>
 #endif
@@ -67,10 +68,10 @@ static inline void pmd_free(struct mm_struct *mm, pmd_t *pmdp)
 	BUG_ON((unsigned long)pmdp & (PAGE_SIZE-1));
 	pgtable_pmd_page_dtor(virt_to_page(pmdp));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
-	if(!pgp_ro_free((void*) pmd))
+	if(!pgp_ro_free((void*) pmdp))
 	{
 		printk("[PGP]: pmd free fail, not a pgp page\n");
-		free_page((unsigned long)pmd);
+		free_page((unsigned long)pmdp);
 	}
 #else
 	free_page((unsigned long)pmdp);
