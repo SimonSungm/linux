@@ -11,7 +11,7 @@
 #define PGP_RO_BUF_BASE 0x10000000
 #endif
 #ifdef CONFIG_ARM64
-#define PGP_RO_BUF_BASE (0x50000000)
+#define PGP_RO_BUF_BASE (0xa0000000)
 #endif
 #define __DEBUG_PAGE_TABLE_PROTECTION
 

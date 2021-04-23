@@ -2,6 +2,10 @@
 config FREEZER
 	def_bool PM_SLEEP || CGROUP_FREEZER
 
+config PAGE_TABLE_PROTECTION
+	bool
+	default y
+
 config PAGE_TABLE_PROTECTION_P4D
 	bool
 	depends on PAGE_TABLE_PROTECTION
@@ -30,3 +34,4 @@ config PAGE_TABLE_PROTECTION_PTE
 config TEXT_SECTION_PROTECTION
 	bool
 	default y
+
