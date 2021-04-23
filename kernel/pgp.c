@@ -38,7 +38,7 @@ void *pgp_ro_alloc(void)
 		ro_alloc_avail = (ro_alloc_avail + 1) % PGP_RO_PAGES;
 	}
 	spin_unlock_irqrestore(&ro_pgp_pages_lock,flags);
-
+//	printk("######[pgp] use pgp_ro_alloc ,alloc_addr= %016lx#######",__pa((void*)alloc_addr));
 	return alloc_addr;
 }
 EXPORT_SYMBOL(pgp_ro_alloc);
@@ -49,6 +49,7 @@ void *pgp_ro_zalloc(void)
 	alloc_addr = pgp_ro_alloc();
 	if(alloc_addr != NULL)
 		pgp_memset(alloc_addr, 0, PAGE_SIZE);
+//	printk("######[pgp] use pgp_ro_zalloc ,alloc_addr= %016lx#######",__pa((void*)alloc_addr));
 	return alloc_addr;
 }
 EXPORT_SYMBOL(pgp_ro_zalloc);

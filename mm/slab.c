@@ -125,6 +125,9 @@
 #include	<asm/page.h>
 
 #include <trace/events/kmem.h>
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
 
 #include	"internal.h"
 
@@ -3642,7 +3645,7 @@ EXPORT_SYMBOL(__kmalloc_node_track_caller);
 static __always_inline void *__do_kmalloc(size_t size, gfp_t flags,
 					  unsigned long caller)
 {
-	struct kmem_cache *cachep;
+	struct kmem_cache *cachep;a
 	void *ret;
 
 	if (unlikely(size > KMALLOC_MAX_CACHE_SIZE))
@@ -3655,7 +3658,10 @@ static __always_inline void *__do_kmalloc(size_t size, gfp_t flags,
 	ret = kasan_kmalloc(cachep, ret, size, flags);
 	trace_kmalloc(caller, ret,
 		      size, cachep->size, flags);
-
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	if(is_pgp_ro_page(ret))
+		printk("#####[pgp]: kmalloc use pgp pool, kmalloc addr= %016llx #####",__pa(ret));
+#endif
 	return ret;
 }
 
