@@ -2,6 +2,7 @@
 #include <linux/spinlock.h>
 #include <linux/types.h>
 #include <linux/mm.h>
+#include <asm/io.h>
 
 bool pgp_ro_buf_ready = false;
 spinlock_t ro_pgp_pages_lock = __SPIN_LOCK_UNLOCKED();
