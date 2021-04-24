@@ -258,8 +258,8 @@ static void __init request_standard_resources(void)
 		    kernel_data.end <= res->end)
 			request_resource(res, &kernel_data);
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
-		//printk("########[memblock] res->start=%016x,res->end=%016x######\n",res->start,res->end);
-		//printk("########[memblock] gpg_pool->start=%016x,gpg_pool->end=%016x######\n",pgp_pool.start,pgp_pool.end);
+		printk("########[memblock] res->start=%016llx,res->end=%016llx######\n",res->start,res->end);
+		printk("########[memblock] gpg_pool->start=%016llx,gpg_pool->end=%016llx######\n",pgp_pool.start,pgp_pool.end);
 		if (pgp_pool.start >= res->start &&
 			pgp_pool.end <= res->end)
 			request_resource(res,&pgp_pool);
