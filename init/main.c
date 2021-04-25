@@ -525,7 +525,7 @@ static inline void initcall_debug_enable(void)
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
 extern bool pgp_ro_buf_ready;
-extren u64 ro_buf_start_va;
+extern u64 ro_buf_start_va;
 
 static void pgp_init(void)
 {

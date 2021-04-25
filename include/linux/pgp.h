@@ -35,7 +35,7 @@ bool pgp_ro_free(void* addr);
 void pgp_memcpy(void *dst, const void *src, size_t len);
 void pgp_memset(void *dst, char n, size_t len);
 
-extren u64 ro_buf_start_va;
+extern u64 ro_buf_start_va;
 static inline bool is_pgp_ro_page(u64 addr)
 {
 #ifndef __DEBUG_PAGE_TABLE_PROTECTION
