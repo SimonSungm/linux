@@ -525,6 +525,7 @@ static inline void initcall_debug_enable(void)
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
 extern bool pgp_ro_buf_ready;
+extren u64 ro_buf_start_va;
 
 static void pgp_init(void)
 {
@@ -552,10 +553,11 @@ static void pgp_init(void)
 	 			(unsigned long)ret, (unsigned long)phys_to_virt(PGP_RO_BUF_BASE));
 	}*/
 	printk("[PGP] ###### PAGE_TABLE_PROTECTION: pgp_init ######\n");
-	memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
+	ro_buf_start_va = (u64) kmalloc(0x400000, GFP_KERNEL);
+	memset(ro_buf_start_va, 0, 0x400000);
 	pgp_ro_buf_ready = true;
 	// For test
-	printk("[PGP] ###### PAGE_TABLE_PROTECTION: start_va is 0x%016lx ######\n", (unsigned long)PGP_ROBUF_VA);
+	printk("[PGP] ###### PAGE_TABLE_PROTECTION: start_va is 0x%016lx ######\n", (unsigned long)ro_buf_start_va);
 	// Test done
 #endif
 }

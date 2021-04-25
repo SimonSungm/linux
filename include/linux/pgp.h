@@ -15,9 +15,9 @@
 #endif
 #define __DEBUG_PAGE_TABLE_PROTECTION
 
-#define PGP_ROBUF_SIZE (0x10000000)
-#define PGP_RO_PAGES (PGP_ROBUF_SIZE >> PAGE_SHIFT)
-#define PGP_ROBUF_VA (phys_to_virt(PGP_RO_BUF_BASE))
+// #define PGP_ROBUF_SIZE (0x10000000)
+#define PGP_RO_PAGES (0x400000 >> PAGE_SHIFT)
+// #define PGP_ROBUF_VA (phys_to_virt(PGP_RO_BUF_BASE))
 
 #ifdef __DEBUG_PAGE_TABLE_PROTECTION
 #define PGP_WARNING(format...) printk(format)
@@ -42,11 +42,15 @@ static inline bool is_pgp_ro_page(u64 addr)
 		return false;
 #endif
 
-	if ((addr >= (u64)PGP_ROBUF_VA)
-		&& (addr < (u64)(PGP_ROBUF_VA + PGP_ROBUF_SIZE)))
+	if ((addr >= ro_buf_start_va) && (addr < (ro_buf_start_va + 0x400000)))
 		return true;
 	else
 		return false;
+	// if ((addr >= (u64)PGP_ROBUF_VA)
+	// 	&& (addr < (u64)(PGP_ROBUF_VA + PGP_ROBUF_SIZE)))
+	// 	return true;
+	// else
+	// 	return false;
 }
 
 static inline void pgp_write_long(void *addr, unsigned long val)

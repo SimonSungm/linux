@@ -8,6 +8,7 @@ spinlock_t ro_pgp_pages_lock = __SPIN_LOCK_UNLOCKED();
 static char ro_pages_stat[PGP_RO_PAGES] = {0};
 unsigned int ro_alloc_avail = 0;
 bool pgp_hyp_init = false;
+u64 ro_buf_start_va;
 EXPORT_SYMBOL(pgp_hyp_init);
 
 
@@ -33,7 +34,7 @@ void *pgp_ro_alloc(void)
 		i++;
 	}
 	if(found) {
-		alloc_addr = (void *)((u64)(PGP_ROBUF_VA) + (ro_alloc_avail << PAGE_SHIFT));
+		alloc_addr = (void *)((u64)(ro_buf_start_va) + (ro_alloc_avail << PAGE_SHIFT));
 		ro_pages_stat[ro_alloc_avail] = true;
 		ro_alloc_avail = (ro_alloc_avail + 1) % PGP_RO_PAGES;
 	}
@@ -69,7 +70,7 @@ bool pgp_ro_free(void* addr)
 	if(!is_pgp_ro_page((unsigned long)addr))
         return false;
 
-	i =  ((u64)addr - (u64)PGP_ROBUF_VA) >> PAGE_SHIFT;
+	i =  ((u64)addr - (u64)ro_buf_start_va) >> PAGE_SHIFT;
 	spin_lock_irqsave(&ro_pgp_pages_lock, flags);
 	ro_pages_stat[i] = false;
 	ro_alloc_avail = i;
