@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0-only
 
 config ARM64_PTDUMP_CORE
-	def_bool n
+	def_bool y
 
 config ARM64_PTDUMP_DEBUGFS
 	bool "Export kernel pagetable layout to userspace via debugfs"

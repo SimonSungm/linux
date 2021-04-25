@@ -15,12 +15,37 @@
 
 #include <asm-generic/pgalloc.h>	/* for pte_{alloc,free}_one */
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
 #define PGD_SIZE	(PTRS_PER_PGD * sizeof(pgd_t))
 
 #if CONFIG_PGTABLE_LEVELS > 2
 
 static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+	gfp_t gfp = GFP_PGTABLE_USER;
+	struct page *page;
+	pmd_t *pmd;
+
+	pmd=pgp_ro_alloc();
+	if(!pmd)
+	{
+		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		if (mm == &init_mm)
+			gfp = GFP_PGTABLE_KERNEL;
+		page = alloc_page(gfp);
+		if (!page)
+			return NULL;
+		if (!pgtable_pmd_page_ctor(page)) {
+			__free_page(page);
+			return NULL;
+		}
+		return page_address(page);
+	}
+	return pmd;
+#else
 	gfp_t gfp = GFP_PGTABLE_USER;
 	struct page *page;
 
@@ -35,13 +60,22 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 		return NULL;
 	}
 	return page_address(page);
+#endif
 }
 
 static inline void pmd_free(struct mm_struct *mm, pmd_t *pmdp)
 {
 	BUG_ON((unsigned long)pmdp & (PAGE_SIZE-1));
 	pgtable_pmd_page_dtor(virt_to_page(pmdp));
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+	if(!pgp_ro_free((void*) pmdp))
+	{
+		PGP_WARNING("[PGP]: pmd free fail, not a pgp page\n");
+		free_page((unsigned long)pmdp);
+	}
+#else
 	free_page((unsigned long)pmdp);
+#endif
 }
 
 static inline void __pud_populate(pud_t *pudp, phys_addr_t pmdp, pudval_t prot)
@@ -64,13 +98,33 @@ static inline void __pud_populate(pud_t *pudp, phys_addr_t pmdp, pudval_t prot)
 
 static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	pud_t *pud;
+	pud=(pud_t*)pgp_ro_alloc();
+	if(!pud)
+	{
+		PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
+		return (pud_t *)__get_free_page(GFP_PGTABLE_USER);
+	}
+	return pud;
+#else
 	return (pud_t *)__get_free_page(GFP_PGTABLE_USER);
+#endif
 }
 
 static inline void pud_free(struct mm_struct *mm, pud_t *pudp)
 {
 	BUG_ON((unsigned long)pudp & (PAGE_SIZE-1));
+
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	if(!pgp_ro_free((void *)pudp))
+	{
+		PGP_WARNING("[PGP]: pud free fail, not a pgp page\n");
+		free_page((unsigned long)pudp);
+	}
+#else
 	free_page((unsigned long)pudp);
+#endif
 }
 
 static inline void __pgd_populate(pgd_t *pgdp, phys_addr_t pudp, pgdval_t prot)

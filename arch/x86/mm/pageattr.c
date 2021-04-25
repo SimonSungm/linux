@@ -29,6 +29,10 @@
 
 #include "mm_internal.h"
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 /*
  * The current flushing context - we pass it instead of 5 arguments:
  */
@@ -1198,6 +1202,22 @@ static void unmap_pud_range(p4d_t *p4d, unsigned long start, unsigned long end)
 	 */
 }
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+static int alloc_pte_page(pmd_t *pmd)
+{
+	pte_t *pte = (pte_t *)pgp_ro_zalloc(); 
+	if(!pte) {
+		PGP_WARNING("[PGP]: pte allocation fail, use normal alloctor instead\n");
+		pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
+	}
+		
+	if (!pte)
+		return -1;
+
+	set_pmd(pmd, __pmd(__pa(pte) | _KERNPG_TABLE));
+	return 0;
+}
+#else
 static int alloc_pte_page(pmd_t *pmd)
 {
 	pte_t *pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
@@ -1207,7 +1227,24 @@ static int alloc_pte_page(pmd_t *pmd)
 	set_pmd(pmd, __pmd(__pa(pte) | _KERNPG_TABLE));
 	return 0;
 }
+#endif
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+static int alloc_pmd_page(pud_t *pud)
+{
+	pmd_t *pmd = (pmd_t *)pgp_ro_zalloc(); 
+	if(!pmd) {
+		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
+	}
+
+	if (!pmd)
+		return -1;
+
+	set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
+	return 0;
+}
+#else
 static int alloc_pmd_page(pud_t *pud)
 {
 	pmd_t *pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
@@ -1217,6 +1254,7 @@ static int alloc_pmd_page(pud_t *pud)
 	set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE));
 	return 0;
 }
+#endif
 
 static void populate_pte(struct cpa_data *cpa,
 			 unsigned long start, unsigned long end,
@@ -1404,7 +1442,15 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 	pgd_entry = cpa->pgd + pgd_index(addr);
 
 	if (pgd_none(*pgd_entry)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+		p4d = (p4d_t *)pgp_ro_zalloc();
+		if(!p4d){
+			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
+		}
+#else
 		p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
+#endif
 		if (!p4d)
 			return -1;
 
@@ -1416,7 +1462,15 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 	 */
 	p4d = p4d_offset(pgd_entry, addr);
 	if (p4d_none(*p4d)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+		pud = (pud_t *)pgp_ro_zalloc();
+		if(!pud){
+			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
+		}
+#else
 		pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
+#endif
 		if (!pud)
 			return -1;
 
