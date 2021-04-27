@@ -118,6 +118,9 @@
 #include	<linux/prefetch.h>
 #include	<linux/sched/task_stack.h>
 
+#ifdef __DEBUG_PAGE_TABLE_PROTECTION
+#include	<linux/pgp.h>
+#endif
 #include	<net/sock.h>
 
 #include	<asm/cacheflush.h>
@@ -3613,7 +3616,10 @@ __do_kmalloc_node(size_t size, gfp_t flags, int node, unsigned long caller)
 		return cachep;
 	ret = kmem_cache_alloc_node_trace(cachep, flags, node, size);
 	ret = kasan_kmalloc(cachep, ret, size, flags);
-
+#ifdef __DEBUG_PAGE_TABLE_PROTECTION
+	if(is_pgp_ro_page(ret))
+		PGP_WARNING("#######[PGP]:Kmalloc use pgp page,addr = 0x%016llx##########\n",(u64)ret);
+#endif
 	return ret;
 }
 

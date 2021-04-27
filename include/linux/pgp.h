@@ -19,7 +19,7 @@ extern bool pgp_ro_buf_ready;
 
 //#define __DEBUG_PAGE_TABLE_PROTECTION
 
-#define PGP_ROBUF_SIZE (0x10000000)
+#define PGP_ROBUF_SIZE (0x8000000)
 #define PGP_RO_PAGES (PGP_ROBUF_SIZE >> PAGE_SHIFT)
 #define PGP_ROBUF_VA (__va(PGP_RO_BUF_BASE))
 
@@ -47,7 +47,7 @@ static inline bool is_pgp_ro_page(u64 addr)
 // 	if(pgp_hyp_init == false)
 // 		return false;
 // #endif
-    printk("########[PGP]addr= 0x%016llx,PGP_ROBUF_VA= 0x%016llx,PGP_ROBUF_VA + PGP_ROBUF_SIZE= 0x%016llx#######\n",(u64)addr,(u64)PGP_ROBUF_VA,(u64)(PGP_ROBUF_VA + PGP_ROBUF_SIZE));
+//    printk("########[PGP]addr= 0x%016llx,PGP_ROBUF_VA= 0x%016llx,PGP_ROBUF_VA + PGP_ROBUF_SIZE= 0x%016llx#######\n",(u64)addr,(u64)PGP_ROBUF_VA,(u64)(PGP_ROBUF_VA + PGP_ROBUF_SIZE));
 	if ((addr >= (u64)PGP_ROBUF_VA)
 		&& (addr < (u64)(PGP_ROBUF_VA + PGP_ROBUF_SIZE)))
 		return true;

@@ -131,7 +131,7 @@ static inline pte_t clear_pte_bit(pte_t pte, pgprot_t prot)
 {
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	if (is_pgp_ro_page((u64)&pte)) {
-		PGP_WARNING("#####[PGP]:get in clear pte bit#####");
+		//PGP_WARNING("#####[PGP]:get in clear pte bit#####");
 		PGP_WRITE_ONCE(&pte_val(pte), (pte_val(pte) & (~pgprot_val(prot))));
 	} else {
 		pte_val(pte) &= ~pgprot_val(prot);
@@ -146,7 +146,7 @@ static inline pte_t set_pte_bit(pte_t pte, pgprot_t prot)
 {
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	if (is_pgp_ro_page((u64)&pte)) {
-		PGP_WARNING("#####[PGP]:get in set pte bit#####");
+		//PGP_WARNING("#####[PGP]:get in set pte bit#####");
 		PGP_WRITE_ONCE(&pte_val(pte), (pte_val(pte) | (~pgprot_val(prot))));
 	} else {
 		pte_val(pte) |= pgprot_val(prot);	

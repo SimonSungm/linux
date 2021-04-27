@@ -51,7 +51,6 @@ void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	if(!pgp_ro_free((void*) pgd))
 	{
-		// PGP_WARNING("[PGP]:pgp_ro_buf_baseva= 0x%016llx,pgp_ro_buf_basepa= 0x%016llx,robase+size= 0x%016llx",PGP_ROBUF_VA,__pa(PGP_ROBUF_VA),(PGP_ROBUF_VA + PGP_ROBUF_SIZE));
 		// PGP_WARNING("[PGP]: pgd free fail, not a pgp page,pgd paddr=0x%016llx,vaddr=0x%016llx\n",(u64)(__pa(pgd)),(u64)(pgd));
 		if (PGD_SIZE == PAGE_SIZE)
 			free_page((unsigned long)pgd);
