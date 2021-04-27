@@ -20,19 +20,50 @@ static struct kmem_cache *pgd_cache __ro_after_init;
 pgd_t *pgd_alloc(struct mm_struct *mm)
 {
 	gfp_t gfp = GFP_PGTABLE_USER;
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	pgd_t* pgd;
+	if (PGD_SIZE == PAGE_SIZE)
+		pgd=(pgd_t *)pgp_ro_zalloc();
+	if(!pgd)
+	{
+		PGP_WARNING("[PGP]: pgd allocation fail, use normal alloctor instead\n");
+		if (PGD_SIZE == PAGE_SIZE)
+			return (pgd_t *)__get_free_page(gfp);
+		else
+			return kmem_cache_alloc(pgd_cache, gfp);
+	}
+	// else
+	// {
+	// 	PGP_WARNING("######[PGP]: pgd allocation success#######\n");
+	// }
+	return pgd;
 
+#else
 	if (PGD_SIZE == PAGE_SIZE)
 		return (pgd_t *)__get_free_page(gfp);
 	else
 		return kmem_cache_alloc(pgd_cache, gfp);
+#endif
 }
 
 void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	if(!pgp_ro_free((void*) pgd))
+	{
+		// PGP_WARNING("[PGP]:pgp_ro_buf_baseva= 0x%016llx,pgp_ro_buf_basepa= 0x%016llx,robase+size= 0x%016llx",PGP_ROBUF_VA,__pa(PGP_ROBUF_VA),(PGP_ROBUF_VA + PGP_ROBUF_SIZE));
+		// PGP_WARNING("[PGP]: pgd free fail, not a pgp page,pgd paddr=0x%016llx,vaddr=0x%016llx\n",(u64)(__pa(pgd)),(u64)(pgd));
+		if (PGD_SIZE == PAGE_SIZE)
+			free_page((unsigned long)pgd);
+		else
+			kmem_cache_free(pgd_cache, pgd);
+	}
+#else
 	if (PGD_SIZE == PAGE_SIZE)
 		free_page((unsigned long)pgd);
 	else
 		kmem_cache_free(pgd_cache, pgd);
+#endif
 }
 
 void __init pgtable_cache_init(void)

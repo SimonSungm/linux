@@ -27,6 +27,10 @@
 
 #ifndef __ASSEMBLY__
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 #include <asm/cmpxchg.h>
 #include <asm/fixmap.h>
 #include <linux/mmdebug.h>
@@ -125,13 +129,31 @@ extern unsigned long empty_zero_page[PAGE_SIZE / sizeof(unsigned long)];
 
 static inline pte_t clear_pte_bit(pte_t pte, pgprot_t prot)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	if (is_pgp_ro_page((u64)&pte)) {
+		PGP_WARNING("#####[PGP]:get in clear pte bit#####");
+		PGP_WRITE_ONCE(&pte_val(pte), (pte_val(pte) & (~pgprot_val(prot))));
+	} else {
+		pte_val(pte) &= ~pgprot_val(prot);
+	}
+#else
 	pte_val(pte) &= ~pgprot_val(prot);
+#endif
 	return pte;
 }
 
 static inline pte_t set_pte_bit(pte_t pte, pgprot_t prot)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	if (is_pgp_ro_page((u64)&pte)) {
+		PGP_WARNING("#####[PGP]:get in set pte bit#####");
+		PGP_WRITE_ONCE(&pte_val(pte), (pte_val(pte) | (~pgprot_val(prot))));
+	} else {
+		pte_val(pte) |= pgprot_val(prot);	
+	}
+#else
 	pte_val(pte) |= pgprot_val(prot);
+#endif
 	return pte;
 }
 
@@ -210,8 +232,15 @@ static inline pte_t pte_mkdevmap(pte_t pte)
 
 static inline void set_pte(pte_t *ptep, pte_t pte)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	if (is_pgp_ro_page((u64)ptep)) {
+		PGP_WRITE_ONCE((&pte_val(*ptep)), pte_val(pte));
+	} else {
+		WRITE_ONCE(*ptep, pte);
+	}
+#else
 	WRITE_ONCE(*ptep, pte);
-
+#endif
 	/*
 	 * Only if the new pte is valid and kernel, otherwise TLB maintenance
 	 * or update_mmu_cache() have the necessary barriers.
@@ -476,7 +505,15 @@ static inline void set_pmd(pmd_t *pmdp, pmd_t pmd)
 	}
 #endif /* __PAGETABLE_PMD_FOLDED */
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+	if (is_pgp_ro_page((u64)pmdp)) {
+		PGP_WRITE_ONCE((&pmd_val(*pmdp)), pmd_val(pmd));
+	} else {
+		WRITE_ONCE(*pmdp, pmd);
+	}
+#else
 	WRITE_ONCE(*pmdp, pmd);
+#endif
 
 	if (pmd_valid(pmd)) {
 		dsb(ishst);
@@ -537,8 +574,15 @@ static inline void set_pud(pud_t *pudp, pud_t pud)
 	}
 #endif /* __PAGETABLE_PUD_FOLDED */
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	if (is_pgp_ro_page((u64)pudp)) {
+		PGP_WRITE_ONCE((&pud_val(*pudp)), pud_val(pud));
+	} else {
+		WRITE_ONCE(*pudp, pud);
+	}
+#else
 	WRITE_ONCE(*pudp, pud);
-
+#endif
 	if (pud_valid(pud)) {
 		dsb(ishst);
 		isb();
@@ -598,7 +642,15 @@ static inline void set_pgd(pgd_t *pgdp, pgd_t pgd)
 		return;
 	}
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	if (is_pgp_ro_page((u64)pgdp)) {
+		PGP_WRITE_ONCE((&pgd_val(*pgdp)), pgd_val(pgd));
+	} else {
+		WRITE_ONCE(*pgdp, pgd);
+	}
+#else
 	WRITE_ONCE(*pgdp, pgd);
+#endif
 	dsb(ishst);
 	isb();
 }

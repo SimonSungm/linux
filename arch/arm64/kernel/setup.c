@@ -50,7 +50,9 @@
 #include <asm/efi.h>
 #include <asm/xen/hypervisor.h>
 #include <asm/mmu_context.h>
-
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
 static int num_standard_resources;
 static struct resource *standard_resources;
 
@@ -73,9 +75,17 @@ static struct resource mem_res[] = {
 		.flags = IORESOURCE_SYSTEM_RAM
 	}
 };
-
+static struct resource pgp_mem_pool[]={
+	{
+		.name = "PGP POOL",
+		.start = 0,
+		.end = 0,
+		.flags = IORESOURCE_SYSTEM_RAM
+	}
+};
 #define kernel_code mem_res[0]
 #define kernel_data mem_res[1]
+#define pgp_pool pgp_mem_pool[0]
 
 /*
  * The recorded values of x0 .. x3 upon kernel entry.
@@ -210,6 +220,8 @@ static void __init request_standard_resources(void)
 	kernel_code.end     = __pa_symbol(__init_begin - 1);
 	kernel_data.start   = __pa_symbol(_sdata);
 	kernel_data.end     = __pa_symbol(_end - 1);
+	pgp_pool.start		= PGP_RO_BUF_BASE;
+	pgp_pool.end		= PGP_RO_BUF_BASE + PGP_ROBUF_SIZE - 1;
 
 	num_standard_resources = memblock.memory.cnt;
 	res_size = num_standard_resources * sizeof(*standard_resources);
@@ -237,6 +249,14 @@ static void __init request_standard_resources(void)
 		if (kernel_data.start >= res->start &&
 		    kernel_data.end <= res->end)
 			request_resource(res, &kernel_data);
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+		if(pgp_pool.start >= res->start &&
+			pgp_pool.end <= res->end)
+		{
+			printk("#######[PGP]:get resource succesfully!######");
+			request_resource(res,&pgp_pool);
+		}
+#endif
 #ifdef CONFIG_KEXEC_CORE
 		/* Userspace will find "Crash kernel" region in /proc/iomem. */
 		if (crashk_res.end && crashk_res.start >= res->start &&
