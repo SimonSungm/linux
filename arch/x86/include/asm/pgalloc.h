@@ -97,7 +97,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 	struct page *page;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT | __GFP_ZERO;
 
-	pmd = pgp_ro_zalloc();
+	pmd = (pmd_t *)pgp_ro_zalloc();
 	if (!pmd) {
 		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
@@ -251,7 +251,7 @@ static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
 	p4d_t *p4d;
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
-	p4d = pgp_ro_zalloc();
+	p4d = (p4d_t *)pgp_ro_zalloc();
 	if(!p4d) {
 		PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
 		if (mm == &init_mm)
@@ -275,7 +275,7 @@ static inline void p4d_free(struct mm_struct *mm, p4d_t *p4d)
 
 	BUG_ON((unsigned long)p4d & (PAGE_SIZE-1));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
-	if(pgp_ro_free((void *)p4d)) {
+	if(!pgp_ro_free((void *)p4d)) {
 		PGP_WARNING("[PGP]: pud free fail, not a pgp page\n");
 		free_page((unsigned long)p4d);
 	}

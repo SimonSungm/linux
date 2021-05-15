@@ -18,6 +18,10 @@
 #include <linux/workqueue.h>
 #include <linux/percpu-refcount.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 
 /*
  * Flags to pass to kmem_cache_create().
@@ -541,6 +545,9 @@ static __always_inline void *kmalloc_large(size_t size, gfp_t flags)
  */
 static __always_inline void *kmalloc(size_t size, gfp_t flags)
 {
+#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
+	void *ret = NULL;
+#endif
 	if (__builtin_constant_p(size)) {
 #ifndef CONFIG_SLOB
 		unsigned int index;
@@ -558,7 +565,15 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 				flags, size);
 #endif
 	}
+#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
+	ret = __kmalloc(size, flags);
+	if(pgp_ro_buf_ready && (unsigned long)ret >= PGP_ROBUF_VA && (unsigned long)ret < PGP_ROBUF_VA + PGP_ROBUF_SIZE){
+		printk("kmalloc to others: 0x%016lx", (unsigned long)ret);
+	}
+	return ret;
+#else
 	return __kmalloc(size, flags);
+#endif
 }
 
 /*

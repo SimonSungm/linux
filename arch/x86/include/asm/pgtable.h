@@ -1151,11 +1151,24 @@ static inline pte_t ptep_get_and_clear_full(struct mm_struct *mm,
 }
 
 #define __HAVE_ARCH_PTEP_SET_WRPROTECT
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+static inline void ptep_set_wrprotect(struct mm_struct *mm,
+				      unsigned long addr, pte_t *ptep)
+{
+	if(is_pgp_ro_page((u64)ptep)){
+		PGP_WRITE_ONCE(ptep, native_pte_val(*ptep) ^ (0x1UL << _PAGE_BIT_RW));
+	} else {
+		PGP_WARNING_SET("[PGP] ptep set wrprotect of non ro page: 0x%016lx", (unsigned long)pmdp);
+		clear_bit(_PAGE_BIT_RW, (unsigned long *)&ptep->pte);
+	}
+}
+#else
 static inline void ptep_set_wrprotect(struct mm_struct *mm,
 				      unsigned long addr, pte_t *ptep)
 {
 	clear_bit(_PAGE_BIT_RW, (unsigned long *)&ptep->pte);
 }
+#endif
 
 #define flush_tlb_fix_spurious_fault(vma, address) do { } while (0)
 
@@ -1201,11 +1214,24 @@ static inline pud_t pudp_huge_get_and_clear(struct mm_struct *mm,
 }
 
 #define __HAVE_ARCH_PMDP_SET_WRPROTECT
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+static inline void pmdp_set_wrprotect(struct mm_struct *mm,
+				      unsigned long addr, pmd_t *pmdp)
+{
+	if(is_pgp_ro_page((u64)pmdp)){
+		PGP_WRITE_ONCE(pmdp, native_pmd_val(*pmdp)^(0x1UL << _PAGE_BIT_RW));
+	} else {
+		PGP_WARNING_SET("[PGP] pmdp set wrprotect of non ro page: 0x%016lx", (unsigned long)pmdp);
+		clear_bit(_PAGE_BIT_RW, (unsigned long *)pmdp);
+	}
+}
+#else
 static inline void pmdp_set_wrprotect(struct mm_struct *mm,
 				      unsigned long addr, pmd_t *pmdp)
 {
 	clear_bit(_PAGE_BIT_RW, (unsigned long *)pmdp);
 }
+#endif
 
 #define pud_write pud_write
 static inline int pud_write(pud_t pud)
@@ -1215,6 +1241,27 @@ static inline int pud_write(pud_t pud)
 
 #ifndef pmdp_establish
 #define pmdp_establish pmdp_establish
+
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+static inline pmd_t pmdp_establish(struct vm_area_struct *vma,
+		unsigned long address, pmd_t *pmdp, pmd_t pmd)
+{
+	if(is_pgp_ro_page((u64)pmdp)){
+		pmd_t old = READ_ONCE(*pmdp);
+		PGP_WRITE_ONCE(pmdp, native_pmd_val(pmd));
+		return old;
+	} else {
+		PGP_WARNING_SET("[PGP] pmdp establish of non ro page: 0x%016lx", (unsigned long)pmdp);
+		if (IS_ENABLED(CONFIG_SMP)) {
+			return xchg(pmdp, pmd);
+		} else {
+			pmd_t old = *pmdp;
+			WRITE_ONCE(*pmdp, pmd);
+			return old;
+		}
+	}
+}
+#else
 static inline pmd_t pmdp_establish(struct vm_area_struct *vma,
 		unsigned long address, pmd_t *pmdp, pmd_t pmd)
 {
@@ -1226,6 +1273,7 @@ static inline pmd_t pmdp_establish(struct vm_area_struct *vma,
 		return old;
 	}
 }
+#endif
 #endif
 /*
  * Page table pages are page-aligned.  The lower half of the top

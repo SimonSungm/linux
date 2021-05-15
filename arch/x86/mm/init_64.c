@@ -229,7 +229,7 @@ static __ref void *spp_getpage(void)
 {
 	void *ptr;
 
-#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#ifdef XCONFIG_PAGE_TABLE_PROTECTION
 	if (after_bootmem){
 		ptr = pgp_ro_zalloc();
 		if(!ptr) {

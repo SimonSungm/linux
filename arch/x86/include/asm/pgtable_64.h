@@ -66,7 +66,7 @@ static inline void native_set_pte(pte_t *ptep, pte_t pte)
 	if(is_pgp_ro_page((u64)ptep)){
 		PGP_WRITE_ONCE(ptep, native_pte_val(pte));
 	} else {
-		//PGP_WARNING("set pte of non ro page");
+		PGP_WARNING_SET("[PGP] set pte of non ro page: 0x%016lx", (unsigned long)ptep);
 		WRITE_ONCE(*ptep, pte);
 	}
 }
@@ -94,7 +94,7 @@ static inline void native_set_pmd(pmd_t *pmdp, pmd_t pmd)
 	if(is_pgp_ro_page((u64)pmdp)){
 		PGP_WRITE_ONCE(pmdp, native_pmd_val(pmd));
 	} else {
-		//PGP_WARNING("set pmd of non ro page");
+		PGP_WARNING_SET("[PGP] set pmd of non ro page: 0x%016lx", (unsigned long)pmdp);
 		WRITE_ONCE(*pmdp, pmd);
 	}
 }
@@ -160,7 +160,7 @@ static inline void native_set_pud(pud_t *pudp, pud_t pud)
 	if(is_pgp_ro_page((u64)pudp)){
 		PGP_WRITE_ONCE(pudp, native_pud_val(pud));
 	} else {
-		//PGP_WARNING("set pud of non ro page");
+		PGP_WARNING_SET("[PGP] set pud of non ro page: 0x%016lx", (unsigned long)pudp);
 		WRITE_ONCE(*pudp, pud);
 	}
 }
@@ -209,7 +209,7 @@ static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
 		if(is_pgp_ro_page((u64)p4dp)){
 			PGP_WRITE_ONCE(p4dp, native_p4d_val(p4d));
 		} else {
-			//PGP_WARNING("set p4d of non ro page");
+			PGP_WARNING_SET("[PGP] set p4d of non ro page: 0x%016lx", (unsigned long)p4dp);
 			WRITE_ONCE(*p4dp, p4d);
 		}
 		return;
@@ -220,7 +220,7 @@ static inline void native_set_p4d(p4d_t *p4dp, p4d_t p4d)
 	if(is_pgp_ro_page((u64)p4dp)){
 		PGP_WRITE_ONCE(p4dp, native_pgd_val(pgd));
 	} else {
-		//PGP_WARNING("set p4d of non ro page");
+		PGP_WARNING("[PGP] set p4d of non ro page: 0x%016lx", (unsigned long)p4dp);
 		WRITE_ONCE(*p4dp, native_make_p4d(native_pgd_val(pgd)));
 	}
 }
@@ -251,7 +251,7 @@ static inline void native_set_pgd(pgd_t *pgdp, pgd_t pgd)
 	if(is_pgp_ro_page((u64)pgdp)){
 		PGP_WRITE_ONCE(pgdp, native_pgd_val(pti_set_user_pgtbl(pgdp, pgd)));
 	} else {
-		//PGP_WARNING("set pgd of non ro page");
+		PGP_WARNING_SET("[PGP] set pgd of non ro page: 0x%016lx", (unsigned long)pgdp);
 		WRITE_ONCE(*pgdp, pti_set_user_pgtbl(pgdp, pgd));
 	}
 }

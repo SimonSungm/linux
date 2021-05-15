@@ -2321,7 +2321,6 @@ void __split_huge_pmd(struct vm_area_struct *vma, pmd_t *pmd,
 		if (page != pmd_page(*pmd))
 			goto out;
 	}
-
 repeat:
 	if (pmd_trans_huge(*pmd)) {
 		if (!page) {

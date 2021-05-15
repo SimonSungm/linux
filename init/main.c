@@ -105,6 +105,7 @@
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
 #include <linux/pgp.h>
+#include <linux/dma-contiguous.h>
 #endif
 
 static int kernel_init(void *);
@@ -525,23 +526,57 @@ static inline void initcall_debug_enable(void)
 #endif
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
-extern bool pgp_ro_buf_ready;
 
 static void pgp_init(void)
 {
-	// void *ret;
-	printk("[PGP] ###### PAGE_TABLE_PROTECTION: pgp_init ######\n");
-	// ret = memremap(PGP_RO_BUF_BASE, PGP_ROBUF_SIZE, MEMREMAP_WB);
-	// if(ret != (void *)phys_to_virt((phys_addr_t)PGP_RO_BUF_BASE)) {
-	// 	panic("[PGP] ###### memrep virt addr: 0x%016lx, expected virt addr: 0x%016lx ###### \n", 
-	// 			(unsigned long)ret, (unsigned long)phys_to_virt(PGP_RO_BUF_BASE));
-	// }
-	memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
-	pgp_ro_buf_ready = true;
+	void *ret;
+	// struct page *page = NULL;
+	// printk("[PGP INIT] ###### PAGE_TABLE_PROTECTION: pgp_init ######\n");
+	// PGP_RO_BUF_BASE = 0x10000000;
+	// PGP_ROBUF_VA = phys_to_virt(PGP_RO_BUF_BASE);
+	// memblock_reserve(PGP_RO_BUF_BASE, PGP_ROBUF_SIZE);
+	// printk("[PGP INIT] ###### succeed to alloc pgp ro buf, ret 0x%016lx ######",(unsigned long)ret);
+	// memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
+	// pgp_ro_buf_ready = true;
+	/* memblock alloc */
+	ret = memblock_alloc(PGP_ROBUF_SIZE, PAGE_SIZE);
+	if(ret == NULL) {
+		printk("[PGP INIT] ###### fail to alloc pgp ro buf ######");
+		pgp_ro_buf_ready = false;
+	} else {
+		pgp_ro_buf_base = virt_to_phys(ret);
+		pgp_ro_buf_base_va = (unsigned long)ret;
+		printk("[PGP INIT] ###### succeed to alloc pgp ro buf ######");
+		memset((void *)PGP_ROBUF_VA, 0xfb, PGP_ROBUF_SIZE);
+		pgp_ro_buf_ready = true;
+	}
+	// memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
+	// pgp_ro_buf_ready = true;
 	// For test
-	printk("[PGP] ###### PAGE_TABLE_PROTECTION: start_va is 0x%016lx ######\n", (unsigned long)PGP_ROBUF_VA);
+	// page = dma_alloc_from_contiguous(NULL, PGP_ROBUF_SIZE >> PAGE_SHIFT, 8, false);
+	// if(page == NULL) {
+	// 	printk("[PGP INIT] fail to alloc pgp ro buf");
+	// 	pgp_ro_buf_ready = false;
+	// } else {
+	// 	ret = page_address(page);
+	// 	pgp_ro_buf_base = __pa_symbol(ret);
+	// 	pgp_ro_buf_base_va = ret;
+	// 	printk("[PGP INIT] ###### succeed to alloc pgp ro buf ######");
+	// 	memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
+	// 	pgp_ro_buf_ready = true;
+	// }
+	// ret = kmalloc(PGP_ROBUF_SIZE, GFP_KERNEL);
+	/* code resource */
+	// ret = vm_map_ram((struct page **)virt_to_page(PGP_ROBUF_VA), PGP_ROBUF_SIZE >> PAGE_SHIFT, 0, PAGE_KERNEL);
+	// if(ret != NULL) {
+	// 	printk("[PGP INIT] ###### succeed to alloc pgp ro buf, ret 0x%016lx ######",(unsigned long)ret);
+	// 	memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
+	// 	pgp_ro_buf_ready = true;
+	// }
+	printk("[PGP INIT] PAGE_TABLE_PROTECTION: start_pa is 0x%016lx, start_va is 0x%016lx, size is 0x%016lx\n", PGP_RO_BUF_BASE, PGP_ROBUF_VA, PGP_ROBUF_SIZE);
 	// Test done
 }
+// postcore_initcall(pgp_init);
 #endif
 
 /* Report memory auto-initialization states for this boot. */
@@ -579,6 +614,10 @@ static void __init mm_init(void)
 	page_ext_init_flatmem();
 	init_debug_pagealloc();
 	report_meminit();
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	pgp_init();
+	__memblock_dump_all();
+#endif
 	mem_init();
 	kmem_cache_init();
 	kmemleak_init();
@@ -621,6 +660,7 @@ asmlinkage __visible void __init start_kernel(void)
 	early_security_init();
 	setup_arch(&command_line);
 	setup_command_line(command_line);
+
 	setup_nr_cpu_ids();
 	setup_per_cpu_areas();
 	smp_prepare_boot_cpu();	/* arch-specific boot-cpu hooks */
@@ -650,9 +690,6 @@ asmlinkage __visible void __init start_kernel(void)
 	sort_main_extable();
 	trap_init();
 	mm_init();
-#ifdef CONFIG_PAGE_TABLE_PROTECTION
-	pgp_init();
-#endif
 	ftrace_init();
 
 	/* trace_printk can be enabled here */

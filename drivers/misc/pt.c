@@ -11,8 +11,10 @@
 #include <asm/sections.h>
 #include <asm/io.h>
 #include <linux/list.h>
+#include <linux/set_memory.h>
 
 #include <linux/pt.h>
+#include <linux/pgp.h>
 
 #define MAX_SIZE 4096
 
@@ -180,6 +182,7 @@ ssize_t proc_read(struct file *filp, char __user *buf, size_t count, loff_t *off
         if(last > ptr->start) printk("WARNING: THERE IS AN OVERLAP\n");
         last = ptr->end;
     }
+    printk("[PGP INIT] PAGE_TABLE_PROTECTION: start_pa is 0x%016lx, start_va is 0x%016lx, size is 0x%016lx\n", PGP_RO_BUF_BASE, PGP_ROBUF_VA, PGP_ROBUF_SIZE);
     if(*offp > 0) return 0;
 	return 0;
 }
@@ -206,6 +209,14 @@ ssize_t proc_write(struct file *filp,const char *buf,size_t count,loff_t *offp)
             else {
                 printk("Fail to enable kernel text protection");
             }
+            break;
+        case SET_MEM_RO:
+            set_memory_ro(PGP_ROBUF_VA, PGP_RO_PAGES);
+            printk("[PGP] set PGP buffer ro\n");
+            break;
+        case SET_MEM_RW:
+            set_memory_rw(PGP_ROBUF_VA, PGP_RO_PAGES);
+            printk("[PGP] set PGP buffer rw\n");
             break;
         default:
             break;
