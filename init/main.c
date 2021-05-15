@@ -546,9 +546,10 @@ static void pgp_init(void)
 	} else {
 		pgp_ro_buf_base = virt_to_phys(ret);
 		pgp_ro_buf_base_va = (unsigned long)ret;
+		pgp_ro_buf_end = pgp_ro_buf_base + PGP_ROBUF_SIZE;
+		pgp_ro_buf_end_va = pgp_ro_buf_base_va + PGP_ROBUF_SIZE;
 		printk("[PGP INIT] ###### succeed to alloc pgp ro buf ######");
 		memset((void *)PGP_ROBUF_VA, 0xfb, PGP_ROBUF_SIZE);
-		pgp_ro_buf_ready = true;
 	}
 	// memset(PGP_ROBUF_VA,0,PGP_ROBUF_SIZE);
 	// pgp_ro_buf_ready = true;
@@ -617,8 +618,12 @@ static void __init mm_init(void)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION
 	pgp_init();
 	__memblock_dump_all();
-#endif
 	mem_init();
+	init_pgp_page_list();
+	pgp_ro_buf_ready = true;
+#else
+	mem_init();
+#endif
 	kmem_cache_init();
 	kmemleak_init();
 	pgtable_init();

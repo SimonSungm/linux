@@ -359,9 +359,6 @@ again:
 
 static void __init_memblock memblock_remove_region(struct memblock_type *type, unsigned long r)
 {
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	printk("[PGP] memblock_remove_region: base: 0x%016lx, size: 0x%016lx, flag: 0x%016lx", type->regions[r].base, type->regions[r].size, type->regions[r].flags);
-#endif
 	type->total_size -= type->regions[r].size;
 	memmove(&type->regions[r], &type->regions[r + 1],
 		(type->cnt - (r + 1)) * sizeof(type->regions[r]));
@@ -386,18 +383,10 @@ void __init memblock_discard(void)
 {
 	phys_addr_t addr, size;
 
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	printk("########## [PGP] memblock discard ############");
-	__memblock_dump_all();
-#endif
 	if (memblock.reserved.regions != memblock_reserved_init_regions) {
 		addr = __pa(memblock.reserved.regions);
 		size = PAGE_ALIGN(sizeof(struct memblock_region) *
 				  memblock.reserved.max);
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-		printk("########## [PGP] free memory region addr: 0x%016lx, size: 0x%016lx ############", addr, size);
-		if(addr == PGP_RO_BUF_BASE) return;
-#endif
 		__memblock_free_late(addr, size);
 	}
 
@@ -405,10 +394,6 @@ void __init memblock_discard(void)
 		addr = __pa(memblock.memory.regions);
 		size = PAGE_ALIGN(sizeof(struct memblock_region) *
 				  memblock.memory.max);
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-		printk("########## [PGP] free memory region addr: 0x%016lx, size: 0x%016lx ############", addr, size);
-		if(addr == PGP_RO_BUF_BASE) return;
-#endif
 		__memblock_free_late(addr, size);
 	}
 }
@@ -804,9 +789,7 @@ static int __init_memblock memblock_remove_range(struct memblock_type *type,
 {
 	int start_rgn, end_rgn;
 	int i, ret;
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	printk("[PGP] memblock_remove_range base: 0x%016lx, size: 0x%016lx", base, size);
-#endif
+
 	ret = memblock_isolate_range(type, base, size, &start_rgn, &end_rgn);
 	if (ret)
 		return ret;
@@ -838,9 +821,6 @@ int __init_memblock memblock_free(phys_addr_t base, phys_addr_t size)
 {
 	phys_addr_t end = base + size - 1;
 
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	printk("##### [PGP] memblock free base: 0x%016lx, size: 0x%016lx #####",base, size);
-#endif
 	memblock_dbg("   memblock_free: [%pa-%pa] %pS\n",
 		     &base, &end, (void *)_RET_IP_);
 
@@ -851,9 +831,7 @@ int __init_memblock memblock_free(phys_addr_t base, phys_addr_t size)
 int __init_memblock memblock_reserve(phys_addr_t base, phys_addr_t size)
 {
 	phys_addr_t end = base + size - 1;
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	printk("[PGP] memblock_reserve: base:0x%016lx, size: 0x%016lx", base, size);
-#endif
+
 	memblock_dbg("memblock_reserve: [%pa-%pa] %pS\n",
 		     &base, &end, (void *)_RET_IP_);
 
@@ -1592,9 +1570,7 @@ void * __init memblock_alloc_try_nid(
 void __init __memblock_free_late(phys_addr_t base, phys_addr_t size)
 {
 	phys_addr_t cursor, end;
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	printk("[PGP] __memblock_free_late: free memory base: 0x%016lx, size: 0x%016lx",base, size);
-#endif
+
 	end = base + size - 1;
 	memblock_dbg("%s: [%pa-%pa] %pS\n",
 		     __func__, &base, &end, (void *)_RET_IP_);
@@ -1956,30 +1932,16 @@ static unsigned long __init free_low_memory_core_early(void)
 
 	memblock_clear_hotplug(0, -1);
 
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	for_each_reserved_mem_region(i, &start, &end) {
-		printk("[PGP] reserve memory region start: 0x%016lx  end: 0x%016lx", start, end);
-		reserve_bootmem_region(start, end);
-	}
-#else
 	for_each_reserved_mem_region(i, &start, &end)
 		reserve_bootmem_region(start, end);
-#endif
 	/*
 	 * We need to use NUMA_NO_NODE instead of NODE_DATA(0)->node_id
 	 *  because in some case like Node0 doesn't have RAM installed
 	 *  low ram will be on Node1
 	 */
-#if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(DEBUG_PAGEALLOC)
-	for_each_free_mem_range(i, NUMA_NO_NODE, MEMBLOCK_NONE, &start, &end, NULL) {
-		printk("[PGP] free reserve memory region start: 0x%016lx  end: 0x%016lx", start, end);
-		count += __free_memory_core(start, end);
-	}
-#else
 	for_each_free_mem_range(i, NUMA_NO_NODE, MEMBLOCK_NONE, &start, &end,
 				NULL)
 		count += __free_memory_core(start, end);
-#endif
 
 	return count;
 }
