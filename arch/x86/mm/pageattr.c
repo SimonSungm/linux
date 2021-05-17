@@ -1073,7 +1073,14 @@ static bool try_to_free_pte_page(pte_t *pte)
 		if (!pte_none(pte[i]))
 			return false;
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	if(!pgp_ro_free((void *)pte)){
+		PGP_WARNING("[PGP]: pte free fail, not a pgp page\n");
+		free_page((unsigned long)pte);
+	}
+#else
 	free_page((unsigned long)pte);
+#endif
 	return true;
 }
 
@@ -1085,7 +1092,14 @@ static bool try_to_free_pmd_page(pmd_t *pmd)
 		if (!pmd_none(pmd[i]))
 			return false;
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+	if(!pgp_ro_free((void *)pmd)){
+		PGP_WARNING("[PGP]: pte free fail, not a pgp page\n");
+		free_page((unsigned long)pmd);
+	}
+#else
 	free_page((unsigned long)pmd);
+#endif
 	return true;
 }
 

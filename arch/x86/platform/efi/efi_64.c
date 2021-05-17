@@ -271,8 +271,11 @@ void efi_sync_low_kernel_mappings(void)
 	pgd_k = pgd_offset_k(PAGE_OFFSET);
 
 	num_entries = pgd_index(EFI_VA_END) - pgd_index(PAGE_OFFSET);
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	pgp_memcpy(pgd_efi, pgd_k, sizeof(pgd_t) * num_entries);
+#else
 	memcpy(pgd_efi, pgd_k, sizeof(pgd_t) * num_entries);
-
+#endif
 	/*
 	 * As with PGDs, we share all P4D entries apart from the one entry
 	 * that covers the EFI runtime mapping space.
@@ -286,8 +289,11 @@ void efi_sync_low_kernel_mappings(void)
 	p4d_k = p4d_offset(pgd_k, 0);
 
 	num_entries = p4d_index(EFI_VA_END);
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+	pgp_memcpy(p4d_efi, p4d_k, sizeof(p4d_t) * num_entries);
+#else
 	memcpy(p4d_efi, p4d_k, sizeof(p4d_t) * num_entries);
-
+#endif
 	/*
 	 * We share all the PUD entries apart from those that map the
 	 * EFI regions. Copy around them.
@@ -301,13 +307,21 @@ void efi_sync_low_kernel_mappings(void)
 	pud_k = pud_offset(p4d_k, 0);
 
 	num_entries = pud_index(EFI_VA_END);
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	pgp_memcpy(pud_efi, pud_k, sizeof(pud_t) * num_entries);
+#else
 	memcpy(pud_efi, pud_k, sizeof(pud_t) * num_entries);
+#endif
 
 	pud_efi = pud_offset(p4d_efi, EFI_VA_START);
 	pud_k = pud_offset(p4d_k, EFI_VA_START);
 
 	num_entries = PTRS_PER_PUD - pud_index(EFI_VA_START);
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+	pgp_memcpy(pud_efi, pud_k, sizeof(pud_t) * num_entries);
+#else
 	memcpy(pud_efi, pud_k, sizeof(pud_t) * num_entries);
+#endif
 }
 
 /*

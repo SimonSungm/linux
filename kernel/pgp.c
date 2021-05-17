@@ -46,7 +46,6 @@ struct page *pgp_ro_alloc(void)
 {
 	unsigned long flags;
 	struct page *page = NULL;
-	static int i = 0;
 
 	if(!pgp_ro_buf_ready)
 		goto out;
@@ -155,7 +154,7 @@ void pgp_memcpy(void *dst, void *src, size_t len)
 			jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMCPY | len, (unsigned long)dst, (unsigned long)virt_to_phys(src));
 #endif
     } else {
-#ifndef __DEBUG_PAGE_TABLE_PROTECTION
+#ifdef __DEBUG_PAGE_TABLE_PROTECTION
 		if(pgp_hyp_init && pgp_ro_buf_ready)
 			printk("[PGP] pgp_memcpy fail from src 0x%016lx to dst 0x%016lx", (unsigned long)src, (unsigned long)dst);
 #endif

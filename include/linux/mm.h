@@ -28,6 +28,10 @@
 #include <linux/overflow.h>
 #include <linux/sizes.h>
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#include <linux/pgp.h>
+#endif
+
 struct mempolicy;
 struct anon_vma;
 struct anon_vma_chain;
@@ -2101,6 +2105,10 @@ extern void reserve_bootmem_region(phys_addr_t start, phys_addr_t end);
 /* Free the reserved page into the buddy system, so it gets managed. */
 static inline void __free_reserved_page(struct page *page)
 {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	if(page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end)
+		WARN(true, "[PGP] free pgp ro buf page: 0x%016lx", (unsigned long)page_to_virt(page));
+#endif
 	ClearPageReserved(page);
 	init_page_count(page);
 	__free_page(page);

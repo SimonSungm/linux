@@ -229,20 +229,26 @@ static __ref void *spp_getpage(void)
 {
 	void *ptr;
 
-#ifdef XCONFIG_PAGE_TABLE_PROTECTION
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
 	if (after_bootmem){
 		ptr = pgp_ro_zalloc();
 		if(!ptr) {
 			PGP_WARNING("[PGP]: spp allocation fail, use normal alloctor instead\n");
 			ptr = (void *) get_zeroed_page(GFP_ATOMIC);
 		}
+	} else {
+		ptr = pgp_ro_zalloc();
+		if(!ptr) {
+			PGP_WARNING("[PGP]: spp allocation fail, use normal alloctor instead\n");
+			ptr = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
+		}
 	}
 #else
 	if (after_bootmem)
 		ptr = (void *) get_zeroed_page(GFP_ATOMIC);
-#endif
 	else
 		ptr = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
+#endif
 
 	if (!ptr || ((unsigned long)ptr & ~PAGE_MASK)) {
 		panic("set_pte_phys: cannot allocate page data %s\n",
@@ -1192,6 +1198,9 @@ remove_pagetable(unsigned long start, unsigned long end, bool direct,
 	pgd_t *pgd;
 	p4d_t *p4d;
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+	WARN(true, "[PGP] trigger remove_pagetable\n");
+#endif
 	for (addr = start; addr < end; addr = next) {
 		next = pgd_addr_end(addr, end);
 

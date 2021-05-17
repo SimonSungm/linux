@@ -7580,7 +7580,7 @@ unsigned long free_reserved_area(void *start, void *end, int poison, const char 
 		direct_map_addr = page_address(page);
 		if ((unsigned int)poison <= 0xFF)
 			memset(direct_map_addr, poison, PAGE_SIZE);
-
+			
 		free_reserved_page(page);
 	}
 

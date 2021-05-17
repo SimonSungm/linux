@@ -847,7 +847,7 @@ int pud_free_pmd_page(pud_t *pud, unsigned long addr)
 		if (!pmd_none(pmd_sv[i])) {
 			pte = (pte_t *)pmd_page_vaddr(pmd_sv[i]);
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
-			if(!pgp_ro_free(pte)){
+			if(!pgp_ro_free((void *)pte)){
 				PGP_WARNING("[PGP]: pud_free_pmd_page: pte free fail, not a pgp page\n");
 				free_page((unsigned long)pte);
 			}
@@ -859,7 +859,7 @@ int pud_free_pmd_page(pud_t *pud, unsigned long addr)
 
 	free_page((unsigned long)pmd_sv);
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
-	if(!pgp_ro_free(pmd)){
+	if(!pgp_ro_free((void *)pmd)){
 		PGP_WARNING("[PGP]: pud_free_pmd_page: pmd free fail, not a pgp page\n");
 		free_page((unsigned long)pmd);
 	}
@@ -888,7 +888,7 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 	flush_tlb_kernel_range(addr, addr + PAGE_SIZE-1);
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
-	if(!pgp_ro_free(pte)){
+	if(!pgp_ro_free((void *)pte)){
 		PGP_WARNING("[PGP]: pmd_free_pte_page: pte free fail, not a pgp page\n");
 		free_page((unsigned long)pte);
 	}
