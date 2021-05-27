@@ -56,7 +56,7 @@
 #include <uapi/linux/module.h>
 #include "module-internal.h"
 
-#ifdef CONFIG_TEXT_SECTION_PROTECTION
+#ifdef XCONFIG_TEXT_SECTION_PROTECTION
 #include <linux/pt.h>
 #endif
 
@@ -3658,8 +3658,8 @@ static noinline int do_init_module(struct module *mod)
 	mod->init_layout.ro_after_init_size = 0;
 	mod->init_layout.text_size = 0;
 
-#ifdef CONFIG_TEXT_SECTION_PROTECTION
-	pt_add_mem_region_size(__pa(mod->core_layout.base), mod->core_layout.text_size, mod->name);
+#ifdef XCONFIG_TEXT_SECTION_PROTECTION
+	pt_add_mem_region_size(mod->core_layout.base, mod->core_layout.text_size, mod->name);
 #endif
 	/*
 	 * We want to free module_init, but be aware that kallsyms may be

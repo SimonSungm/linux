@@ -229,26 +229,10 @@ static __ref void *spp_getpage(void)
 {
 	void *ptr;
 
-#ifdef CONFIG_PAGE_TABLE_PROTECTION
-	if (after_bootmem){
-		ptr = pgp_ro_zalloc();
-		if(!ptr) {
-			PGP_WARNING("[PGP]: spp allocation fail, use normal alloctor instead\n");
-			ptr = (void *) get_zeroed_page(GFP_ATOMIC);
-		}
-	} else {
-		ptr = pgp_ro_zalloc();
-		if(!ptr) {
-			PGP_WARNING("[PGP]: spp allocation fail, use normal alloctor instead\n");
-			ptr = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
-		}
-	}
-#else
 	if (after_bootmem)
 		ptr = (void *) get_zeroed_page(GFP_ATOMIC);
 	else
 		ptr = memblock_alloc(PAGE_SIZE, PAGE_SIZE);
-#endif
 
 	if (!ptr || ((unsigned long)ptr & ~PAGE_MASK)) {
 		panic("set_pte_phys: cannot allocate page data %s\n",
@@ -263,7 +247,15 @@ static __ref void *spp_getpage(void)
 static p4d_t *fill_p4d(pgd_t *pgd, unsigned long vaddr)
 {
 	if (pgd_none(*pgd)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+		p4d_t *p4d = (p4d_t *)pgp_ro_zalloc();
+		if(!p4d) {
+			PGP_WARNING_ALLOC();
+			p4d = (p4d_t *)spp_getpage();
+		}
+#else
 		p4d_t *p4d = (p4d_t *)spp_getpage();
+#endif
 		pgd_populate(&init_mm, pgd, p4d);
 		if (p4d != p4d_offset(pgd, 0))
 			printk(KERN_ERR "PAGETABLE BUG #00! %p <-> %p\n",
@@ -275,7 +267,15 @@ static p4d_t *fill_p4d(pgd_t *pgd, unsigned long vaddr)
 static pud_t *fill_pud(p4d_t *p4d, unsigned long vaddr)
 {
 	if (p4d_none(*p4d)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+		pud_t *pud = (pud_t *)pgp_ro_zalloc();
+		if(!pud) {
+			PGP_WARNING_ALLOC();
+			pud = (pud_t *)spp_getpage();
+		}
+#else
 		pud_t *pud = (pud_t *)spp_getpage();
+#endif
 		p4d_populate(&init_mm, p4d, pud);
 		if (pud != pud_offset(p4d, 0))
 			printk(KERN_ERR "PAGETABLE BUG #01! %p <-> %p\n",
@@ -287,7 +287,15 @@ static pud_t *fill_pud(p4d_t *p4d, unsigned long vaddr)
 static pmd_t *fill_pmd(pud_t *pud, unsigned long vaddr)
 {
 	if (pud_none(*pud)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+		pmd_t *pmd = (pmd_t *) pgp_ro_zalloc();
+		if(!pmd) {
+			PGP_WARNING_ALLOC();
+			pmd = (pmd_t *)spp_getpage();
+		}
+#else
 		pmd_t *pmd = (pmd_t *) spp_getpage();
+#endif
 		pud_populate(&init_mm, pud, pmd);
 		if (pmd != pmd_offset(pud, 0))
 			printk(KERN_ERR "PAGETABLE BUG #02! %p <-> %p\n",
@@ -299,7 +307,15 @@ static pmd_t *fill_pmd(pud_t *pud, unsigned long vaddr)
 static pte_t *fill_pte(pmd_t *pmd, unsigned long vaddr)
 {
 	if (pmd_none(*pmd)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+		pte_t *pte = (pte_t *) pgp_ro_zalloc();
+		if(!pte) {
+			PGP_WARNING_ALLOC();
+			pte = (pte_t *)spp_getpage();
+		}
+#else
 		pte_t *pte = (pte_t *) spp_getpage();
+#endif
 		pmd_populate_kernel(&init_mm, pmd, pte);
 		if (pte != pte_offset_kernel(pmd, 0))
 			printk(KERN_ERR "PAGETABLE BUG #03!\n");
@@ -392,19 +408,43 @@ static void __init __init_extra_mapping(unsigned long phys, unsigned long size,
 	for (; size; phys += PMD_SIZE, size -= PMD_SIZE) {
 		pgd = pgd_offset_k((unsigned long)__va(phys));
 		if (pgd_none(*pgd)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+			p4d = (p4d_t *) pgp_ro_zalloc();
+			if(!p4d) {
+				PGP_WARNING_ALLOC();
+				p4d = (p4d_t *) spp_getpage();
+			}
+#else
 			p4d = (p4d_t *) spp_getpage();
+#endif
 			set_pgd(pgd, __pgd(__pa(p4d) | _KERNPG_TABLE |
 						_PAGE_USER));
 		}
 		p4d = p4d_offset(pgd, (unsigned long)__va(phys));
 		if (p4d_none(*p4d)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+			pud = (pud_t *) pgp_ro_zalloc();
+			if(!pud) {
+				PGP_WARNING_ALLOC();
+				pud = (pud_t *) spp_getpage();
+			}
+#else
 			pud = (pud_t *) spp_getpage();
+#endif
 			set_p4d(p4d, __p4d(__pa(pud) | _KERNPG_TABLE |
 						_PAGE_USER));
 		}
 		pud = pud_offset(p4d, (unsigned long)__va(phys));
 		if (pud_none(*pud)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+			pmd = (pmd_t *) pgp_ro_zalloc();
+			if(!pmd) {
+				PGP_WARNING_ALLOC();
+				pmd = (pmd_t *) spp_getpage();
+			}
+#else
 			pmd = (pmd_t *) spp_getpage();
+#endif
 			set_pud(pud, __pud(__pa(pmd) | _KERNPG_TABLE |
 						_PAGE_USER));
 		}

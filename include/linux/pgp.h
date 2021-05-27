@@ -6,6 +6,8 @@
 #include <asm/io.h>
 #include <linux/pt.h>
 
+//#define PGP_DEBUG_ALLOCATION
+
 extern volatile bool pgp_hyp_init;
 extern unsigned long pgp_ro_buf_base;
 extern unsigned long pgp_ro_buf_end;
@@ -13,23 +15,30 @@ extern unsigned long pgp_ro_buf_base_va;
 extern unsigned long pgp_ro_buf_end_va;
 extern bool pgp_ro_buf_ready;
 
+#ifdef PGP_DEBUG_ALLOCATION
+extern int pgcnt;
+extern long alloc_cnt;
+extern long free_cnt;
+#endif
+
 //#define __DEBUG_PAGE_TABLE_PROTECTION
-#define PGP_DEBUG_ALLOCATION
 /* defined in kernel/pgp.c */
 #define PGP_RO_BUF_BASE pgp_ro_buf_base
 #define PGP_ROBUF_VA pgp_ro_buf_base_va
 
-#define PGP_ROBUF_SIZE (0x8000000UL)
+#define PGP_ROBUF_SIZE (0x10000000UL)
 #define PGP_RO_PAGES (PGP_ROBUF_SIZE >> PAGE_SHIFT)
 
+#define PGP_WARNING_ALLOC() PGP_WARNING("[PGP WARNING ALLOC] %s: use normal allocator instead\n", __FUNCTION__)
+#define PGP_WARNING_FREE(x) PGP_WARNING("[PGP WARNING FREE] %s: not a pgp page: 0x%016lx\n", __FUNCTION__, (unsigned long)x)
+#define PGP_WARNING_SET(x) PGP_WARNING("[PGP WARNING SET] %s: not in a pgp page: 0x%016lx\n", __FUNCTION__, (unsigned long)x)
+
 #ifdef __DEBUG_PAGE_TABLE_PROTECTION
-#define PGP_WARNING_SET(format...) 
 #define PGP_WARNING(format...) WARN(true, format)
 #define PGP_WRITE_ONCE(addr, value) WRITE_ONCE(*(unsigned long *)addr, (unsigned long)value)
 #else
-#define PGP_WARNING_SET(format...) 
 #define PGP_WARNING(format...)
-#define PGP_WRITE_ONCE(addr, value) pgp_write_long((unsigned long *)addr, (unsigned long)value);
+#define PGP_WRITE_ONCE(addr, value) pgp_write_long((unsigned long *)addr, (unsigned long)value)
 #endif
 
 

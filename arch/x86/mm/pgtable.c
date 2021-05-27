@@ -427,7 +427,7 @@ pgd_t *pgd_alloc(struct mm_struct *mm)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	pgd = (pgd_t *)pgp_ro_zalloc();
 	if(pgd == NULL){
-		PGP_WARNING("[PGP]: pgd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING_ALLOC();
 		pgd = _pgd_alloc();
 	}
 #else
@@ -469,7 +469,7 @@ out_free_pmds:
 out_free_pgd:
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	if(!pgp_ro_free((void *)pgd)) {
-		PGP_WARNING("[PGP]: pgd free fail, not a pgp page: 0x%016lx\n", (unsigned long)pgd);
+		PGP_WARNING_FREE(pgd);
 		_pgd_free(pgd);
 	}
 #else
@@ -486,7 +486,7 @@ void pgd_free(struct mm_struct *mm, pgd_t *pgd)
 	paravirt_pgd_free(mm, pgd);		// nothing need to do in non para-virt mode
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
 	if(!pgp_ro_free((void *)pgd)) {
-		PGP_WARNING("[PGP]: pgd free fail, not a pgp page: 0x%016lx\n", (unsigned long)pgd);
+		PGP_WARNING_FREE(pgd);
 		_pgd_free(pgd);
 	}
 #else
@@ -846,9 +846,9 @@ int pud_free_pmd_page(pud_t *pud, unsigned long addr)
 	for (i = 0; i < PTRS_PER_PMD; i++) {
 		if (!pmd_none(pmd_sv[i])) {
 			pte = (pte_t *)pmd_page_vaddr(pmd_sv[i]);
-#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 			if(!pgp_ro_free((void *)pte)){
-				PGP_WARNING("[PGP]: pud_free_pmd_page: pte free fail, not a pgp page\n");
+				PGP_WARNING_FREE(pte);
 				free_page((unsigned long)pte);
 			}
 #else
@@ -860,7 +860,7 @@ int pud_free_pmd_page(pud_t *pud, unsigned long addr)
 	free_page((unsigned long)pmd_sv);
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
 	if(!pgp_ro_free((void *)pmd)){
-		PGP_WARNING("[PGP]: pud_free_pmd_page: pmd free fail, not a pgp page\n");
+		PGP_WARNING_FREE(pmd);
 		free_page((unsigned long)pmd);
 	}
 #else
@@ -887,9 +887,9 @@ int pmd_free_pte_page(pmd_t *pmd, unsigned long addr)
 	/* INVLPG to clear all paging-structure caches */
 	flush_tlb_kernel_range(addr, addr + PAGE_SIZE-1);
 
-#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	if(!pgp_ro_free((void *)pte)){
-		PGP_WARNING("[PGP]: pmd_free_pte_page: pte free fail, not a pgp page\n");
+		PGP_WARNING_FREE(pte);
 		free_page((unsigned long)pte);
 	}
 #else

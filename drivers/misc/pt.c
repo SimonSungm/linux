@@ -6,24 +6,31 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 #include <linux/types.h>
+#include <linux/sched/task.h>
 #include <linux/mm.h>
+#include <linux/sched/mm.h>
+#include <linux/list.h>
+#include <linux/efi.h>
+#include <linux/set_memory.h>
+
 #include <asm-generic/sections.h>
 #include <asm/sections.h>
 #include <asm/io.h>
-#include <linux/list.h>
-#include <linux/set_memory.h>
+#include <asm/page.h>
+#include <asm/pgalloc.h>
+#include <asm/pgtable.h>
 
 #include <linux/pt.h>
 #include <linux/pgp.h>
 
 #define MAX_SIZE 4096
 
-//#define __DEBUG_TEXT_PROTECTION
+#ifndef CONFIG_X86
+#define __DEBUG_TEXT_PROTECTION
+#endif
 
 static char msg[MAX_SIZE];
 extern char _stext[], _etext[];
-
-#ifdef CONFIG_X86_64
 
 #define REGION_NUM 1
 struct px_memory_region machine_mem[REGION_NUM] = {
@@ -36,84 +43,191 @@ struct px_memory_region machine_mem[REGION_NUM] = {
 unsigned long phys_start = 0;
 unsigned long phys_end = 0x4080000000;
 
-// int module_walk_pud_entry(pud_t *pud, unsigned long addr,
-// 			 unsigned long next, struct mm_walk *walk)
-// {
-//      pt_add_mem_region_size(addr & PUD_MASK, PUD_SIZE, "pud");
-// }
-// int module_walk_pmd_entry(pmd_t *pmd, unsigned long addr,
-// 			 unsigned long next, struct mm_walk *walk)
-// {
-//      pt_add_mem_region_size(addr & PMD_MASK, PMD_SIZE, "pmd");
-// }
-// int module_walk_pud_entry(pte_t *pte, unsigned long addr,
-// 			 unsigned long next, struct mm_walk *walk)
-// {
-//      pt_add_mem_region_size(addr & PTE_MASK, PTE_SIZE, "pte");
-// }
+LIST_HEAD(pt_mem_regions);
+#ifdef CONFIG_X86
+#define pgd_leaf pgd_large
+#define p4d_leaf p4d_large
+#define pud_leaf pud_large
+#define pmd_leaf pmd_large
 
-// struct mm_walk_ops module_mm_walk_ops = {
-// 	int (*pud_entry)(pud_t *pud, unsigned long addr,
-// 			 unsigned long next, struct mm_walk *walk);
-// 	int (*pmd_entry)(pmd_t *pmd, unsigned long addr,
-// 			 unsigned long next, struct mm_walk *walk);
-// 	int (*pte_entry)(pte_t *pte, unsigned long addr,
-// 			 unsigned long next, struct mm_walk *walk);
-// 	int (*pte_hole)(unsigned long addr, unsigned long next,
-// 			struct mm_walk *walk);
-// 	int (*hugetlb_entry)(pte_t *pte, unsigned long hmask,
-// 			     unsigned long addr, unsigned long next,
-// 			     struct mm_walk *walk);
-// 	int (*test_walk)(unsigned long addr, unsigned long next,
-// 			struct mm_walk *walk);
-// };
+#if CONFIG_PGTABLE_LEVELS > 4
+#define pgdp_page_vaddr(pgdp) pgd_page_vaddr(*pgdp)
+#else
+#define pgdp_page_vaddr(pgdp) (pgdp)
+#endif
+#define p4dp_page_vaddr(p4dp) p4d_page_vaddr(*p4dp)
+#define pudp_page_vaddr(pudp) pud_page_vaddr(*pudp)
+#define pmdp_page_vaddr(pmdp) pmd_page_vaddr(*pmdp)
+#endif
+#ifdef CONFIG_ARM64
+static inline bool pgd_leaf(pgd_t pgd) { return false; }
+static inline bool p4d_leaf(p4d_t p4d) { return false; }
+#define p4d_present(p4d) (p4d_val(p4d))
+#define pud_leaf pud_sect
+#define pmd_leaf pmd_sect
 
+#define pgdp_page_vaddr(pgdp) (pgdp)
+#if CONFIG_PGTABLE_LEVELS > 3
+#define p4dp_page_vaddr(pgdp) __va(pgd_page_paddr(*pgdp))
+#else
+#define p4dp_page_vaddr(pgdp) (p4dp)
+#endif
+#define pudp_page_vaddr(pudp) __va(pud_page_paddr(*pudp))
+#define pmdp_page_vaddr(pmdp) __va(pmd_page_paddr(*pmdp))
 #endif
 
-LIST_HEAD(pt_mem_regions);
+struct pgp_fail_struct {
+    unsigned long addr;
+    char *name;
+    struct list_head list;
+};
+LIST_HEAD(pgp_fail_list);
 
+int pgp_check_fail(unsigned long addr, char *name)
+{
+    struct pgp_fail_struct *p, *new;
+    list_for_each_entry(p, &pgp_fail_list, list) {
+        if(addr == p->addr)
+            return 0;
+        else if(addr < p->addr) {
+            new = kmalloc(sizeof(struct pgp_fail_struct), GFP_KERNEL);
+            new->addr = addr;
+            new->name = name;
+            if(!new)
+                panic("cannot alloc pgp fail struct\n");
+            list_add_tail(&(new->list), &(p->list));
+            return 0;
+        }
+    }
+    new = kmalloc(sizeof(struct pgp_fail_struct), GFP_KERNEL);
+    new->addr = addr;
+    new->name = name;
+    if(!new)
+        panic("cannot alloc pgp fail struct\n");
+    list_add_tail(&(new->list), &pgp_fail_list);
+    return 0;
+}
 
-// int translate_mem(unsigned long start, unsigned long size)
-// {
-//     unsigned long va;
-//     unsigned long end = start + size;
-//     walk_page_range(&init_mm, start, end, )
-// }
+int check_pte(pte_t *ptep)
+{
+    if(!is_pgp_ro_page((unsigned long)ptep))
+        pgp_check_fail((unsigned long)ptep, "pte");
+
+    return 0;   
+}
+
+int check_pmd(pmd_t *pmdp)
+{
+    int i;
+    if(!is_pgp_ro_page((unsigned long)pmdp))
+        pgp_check_fail((unsigned long)pmdp, "pmd");
+    
+    for (i = 0; i < PTRS_PER_PMD; i++) {
+        if(pmd_present(*pmdp) && !pmd_leaf(*pmdp)){
+            check_pte((pte_t *)pmdp_page_vaddr(pmdp));
+        }
+        pmdp++;
+    }
+    return 0;
+}
+
+int check_pud(pud_t *pudp)
+{
+    int i;
+    if(!is_pgp_ro_page((unsigned long)pudp))
+        pgp_check_fail((unsigned long)pudp, "pud");
+
+    for (i = 0; i < PTRS_PER_PUD; i++) {
+        if(pud_present(*pudp) && !pud_leaf(*pudp)){
+            check_pmd((pmd_t *)pudp_page_vaddr(pudp));
+        }
+        pudp++;
+    }
+    return 0;
+}
+
+int check_p4d(p4d_t *p4dp)
+{
+    int i;
+    if(!is_pgp_ro_page((unsigned long)p4dp))
+        pgp_check_fail((unsigned long)p4dp, "p4d");
+
+    for (i = 0; i < PTRS_PER_P4D; i++) {
+        if(p4d_present(*p4dp) && !p4d_leaf(*p4dp)){
+            check_pud((pud_t *)p4dp_page_vaddr(p4dp));
+        }
+        p4dp++;
+    }
+    return 0;
+}
+
+int check_pgd(pgd_t *pgdp)
+{
+    int i;
+    if(!is_pgp_ro_page((unsigned long)pgdp))
+        pgp_check_fail((unsigned long)pgdp, "pgd");
+
+    for (i = 0; i < PTRS_PER_PGD; i++) {
+        if(pgd_present(*pgdp) && !pgd_leaf(*pgdp)){
+            check_p4d((p4d_t *)pgdp_page_vaddr(pgdp));
+        }
+        pgdp++;
+    }
+    return 0;
+}
+
+int check_pgt_region(void)
+{
+    struct task_struct *process, *task;
+    struct mm_struct *mm;
+    pgd_t *pgdp;
+    struct pgp_fail_struct *p;
+    int cnt = 0;
+
+    for_each_process_thread(process, task) {
+        get_task_struct(task);
+        mm = task->mm;
+        if(mm != NULL) {
+            down_read(&mm->mmap_sem);
+            pgdp = mm->pgd;
+            if(pgdp)
+                check_pgd(pgdp);
+            up_read(&mm->mmap_sem);
+        }
+        mm = task->active_mm;
+        if(mm != NULL){
+            down_read(&mm->mmap_sem);
+            pgdp = mm->pgd;
+            if(pgdp)    
+                check_pgd(pgdp); 
+            up_read(&mm->mmap_sem);
+        }
+        put_task_struct(task);
+    }
+#if defined(CONFIG_EFI) && defined(CONFIG_X86_64)
+    down_read(&efi_mm.mmap_sem);
+    pgdp = efi_mm.pgd;
+    if(pgdp)
+        check_pgd(pgdp);
+    up_read(&efi_mm.mmap_sem);
+#endif
+    list_for_each_entry(p, &pgp_fail_list, list) {
+        printk("[PGP WARNING CHECK] addr: 0x%016lx, name: %s\n", p->addr, p->name);
+        cnt ++;
+    }
+    printk("[PGP WARNING CHECK] total fail: %d\n", cnt);
+    while(p = list_first_entry_or_null(&pgp_fail_list, struct pgp_fail_struct, list)) {
+        list_del(&(p->list));
+        kfree(p);
+    }
+    return 0;
+}
 
 int pt_add_mem_region_size(unsigned long start, unsigned long size, char *name)
 {
     return pt_add_mem_region(start, start+size, name);
 }
 EXPORT_SYMBOL(pt_add_mem_region_size);
-
-// int pt_add_mem_region_merge(unsigned long start, unsigned long end, char *name)
-// {
-//     struct px_memory_region *new = kmalloc(sizeof(struct px_memory_region), GFP_KERNEL);
-//     struct px_memory_region *ptr;
-//     struct list_head *l;
-//     new->start = start & PAGE_MASK;
-//     new->end = PAGE_ALIGN(end);
-//     new->name = name;
-//     INIT_LIST_HEAD(&new->list);
-
-//     list_for_each(l, &pt_mem_regions) {
-//         ptr = list_entry(l, struct px_memory_region, list);
-//         if(ptr->start >= new->start){
-//             if(new->end >= ptr->start) {
-//                 ptr->start = new->start;
-//                 ptr->end = max(ptr->end, new->end);
-//             }
-//             else 
-//                 list_add_tail(&new->list, l);
-//             return 0;
-//         } else if(ptr->end >= new->start) {
-//             ptr->end = max(ptr->end, new->end);
-//             return 0;
-//         }
-//     }
-//     list_add_tail(&new->list, &pt_mem_regions);
-//     return 0;
-// }
 
 int pt_add_mem_region(unsigned long start, unsigned long end, char *name)
 {
@@ -182,7 +296,11 @@ ssize_t proc_read(struct file *filp, char __user *buf, size_t count, loff_t *off
         if(last > ptr->start) printk("WARNING: THERE IS AN OVERLAP\n");
         last = ptr->end;
     }
+    //check_pgt_region();
     printk("[PGP INIT] PAGE_TABLE_PROTECTION: start_pa is 0x%016lx, start_va is 0x%016lx, size is 0x%016lx\n", PGP_RO_BUF_BASE, PGP_ROBUF_VA, PGP_ROBUF_SIZE);
+#ifdef PGP_DEBUG_ALLOCATION
+    printk("[PGP]: Available pgp pages: %d, Alloc count: %ld, Free count: %ld, Used: %ld\n", pgcnt, alloc_cnt, free_cnt, alloc_cnt-free_cnt);
+#endif
     if(*offp > 0) return 0;
 	return 0;
 }

@@ -1155,10 +1155,12 @@ static inline pte_t ptep_get_and_clear_full(struct mm_struct *mm,
 static inline void ptep_set_wrprotect(struct mm_struct *mm,
 				      unsigned long addr, pte_t *ptep)
 {
-	if(is_pgp_ro_page((u64)ptep)){
-		PGP_WRITE_ONCE(ptep, native_pte_val(*ptep) ^ (0x1UL << _PAGE_BIT_RW));
+	if(is_pgp_ro_page((unsigned long)ptep)){
+		pteval_t pte = ptep->pte;
+		clear_bit(_PAGE_BIT_RW, (unsigned long *)&pte);
+		PGP_WRITE_ONCE(ptep, pte);
 	} else {
-		PGP_WARNING_SET("[PGP] ptep set wrprotect of non ro page: 0x%016lx", (unsigned long)pmdp);
+		PGP_WARNING_SET(ptep);
 		clear_bit(_PAGE_BIT_RW, (unsigned long *)&ptep->pte);
 	}
 }
@@ -1218,10 +1220,12 @@ static inline pud_t pudp_huge_get_and_clear(struct mm_struct *mm,
 static inline void pmdp_set_wrprotect(struct mm_struct *mm,
 				      unsigned long addr, pmd_t *pmdp)
 {
-	if(is_pgp_ro_page((u64)pmdp)){
-		PGP_WRITE_ONCE(pmdp, native_pmd_val(*pmdp)^(0x1UL << _PAGE_BIT_RW));
+	if(is_pgp_ro_page((unsigned long)pmdp)){
+		pmdval_t pmd = pmdp->pmd;
+		clear_bit(_PAGE_BIT_RW, (unsigned long *)&pmd);
+		PGP_WRITE_ONCE(pmdp, pmd);
 	} else {
-		PGP_WARNING_SET("[PGP] pmdp set wrprotect of non ro page: 0x%016lx", (unsigned long)pmdp);
+		PGP_WARNING_SET(pmdp);
 		clear_bit(_PAGE_BIT_RW, (unsigned long *)pmdp);
 	}
 }
@@ -1246,12 +1250,12 @@ static inline int pud_write(pud_t pud)
 static inline pmd_t pmdp_establish(struct vm_area_struct *vma,
 		unsigned long address, pmd_t *pmdp, pmd_t pmd)
 {
-	if(is_pgp_ro_page((u64)pmdp)){
+	if(is_pgp_ro_page((unsigned long)pmdp)){
 		pmd_t old = READ_ONCE(*pmdp);
 		PGP_WRITE_ONCE(pmdp, native_pmd_val(pmd));
 		return old;
 	} else {
-		PGP_WARNING_SET("[PGP] pmdp establish of non ro page: 0x%016lx", (unsigned long)pmdp);
+		PGP_WARNING_SET(pmdp);
 		if (IS_ENABLED(CONFIG_SMP)) {
 			return xchg(pmdp, pmd);
 		} else {

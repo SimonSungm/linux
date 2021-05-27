@@ -922,7 +922,7 @@ static inline void __free_one_page(struct page *page,
 	VM_BUG_ON_PAGE(bad_range(zone, page), page);
 
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -949,7 +949,7 @@ continue_merging:
 			clear_page_guard(zone, buddy, order, migratetype);
 		else {
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -1006,7 +1006,7 @@ done_merging:
 		if (pfn_valid_within(buddy_pfn) &&
 		    page_is_buddy(higher_page, higher_buddy, order + 1)) {
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -1016,7 +1016,7 @@ done_merging:
 		}
 	}
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -2066,7 +2066,7 @@ static inline void expand(struct zone *zone, struct page *page,
 		if (set_page_guard(zone, &page[size], high, migratetype))
 			continue;
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -2229,7 +2229,7 @@ struct page *__rmqueue_smallest(struct zone *zone, unsigned int order,
 		if (!page)
 			continue;
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -3071,7 +3071,7 @@ static void free_unref_page_commit(struct page *page, unsigned long pfn)
 	struct per_cpu_pages *pcp;
 	int migratetype;
 
-#ifdef CONFIG_PAGE_TABLE_PROTECTION
+#ifdef XCONFIG_PAGE_TABLE_PROTECTION
 		if((unsigned long)page_address(page) >= PGP_ROBUF_VA && (unsigned long)page_address(page) < PGP_ROBUF_VA+PGP_ROBUF_SIZE ){
 			pgp_ro_free(page_address(page));
 			return;
@@ -3212,7 +3212,7 @@ int __isolate_free_page(struct page *page, unsigned int order)
 
 	/* Remove page from free list */
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -3754,7 +3754,7 @@ try_this_zone:
 			if (unlikely(order && (alloc_flags & ALLOC_HARDER)))
 				reserve_highatomic_pageblock(page, zone, order);
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && (unsigned long)page_to_phys(page) >= PGP_RO_BUF_BASE && (unsigned long)page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && (unsigned long)page_to_phys(page) >= pgp_ro_buf_base && (unsigned long)page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -4841,7 +4841,7 @@ out:
 
 	trace_mm_page_alloc(page, order, alloc_mask, ac.migratetype);
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && (unsigned long)page_to_phys(page) >= PGP_RO_BUF_BASE && (unsigned long)page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && (unsigned long)page_to_phys(page) >= pgp_ro_buf_base && (unsigned long)page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -4875,7 +4875,7 @@ EXPORT_SYMBOL(get_zeroed_page);
 static inline void free_the_page(struct page *page, unsigned int order)
 {
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && (unsigned long)page_to_phys(page) >= PGP_RO_BUF_BASE && (unsigned long)page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && (unsigned long)page_to_phys(page) >= pgp_ro_buf_base && (unsigned long)page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif
@@ -8679,7 +8679,7 @@ __offline_isolated_pages(unsigned long start_pfn, unsigned long end_pfn)
 			pfn, 1 << order, end_pfn);
 #endif
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif

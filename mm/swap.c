@@ -768,12 +768,12 @@ void release_pages(struct page **pages, int nr)
 
 	for (i = 0; i < nr; i++) {
 		struct page *page = pages[i];
-// #ifdef CONFIG_PAGE_TABLE_PROTECTION
-// 		if((unsigned long)page_address(page) >= PGP_ROBUF_VA && (unsigned long)page_address(page) < PGP_ROBUF_VA+PGP_ROBUF_SIZE ){
-// 			pgp_ro_free(page_address(page));
-// 			continue;
-// 		}
-// #endif
+#ifdef CONFIG_PAGE_TABLE_PROTECTION
+		if((unsigned long)page_address(page) >= PGP_ROBUF_VA && (unsigned long)page_address(page) < PGP_ROBUF_VA+PGP_ROBUF_SIZE ){
+			pgp_ro_free(page_address(page));
+			continue;
+		}
+#endif
 		/*
 		 * Make sure the IRQ-safe lock-holding time does not get
 		 * excessive with a continuous string of pages from the

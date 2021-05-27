@@ -1046,6 +1046,35 @@ __split_large_page(struct cpa_data *cpa, pte_t *kpte, unsigned long address,
 	return 0;
 }
 
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
+			    unsigned long address)
+{
+	struct page *base;
+	void *ret = NULL;
+
+	if (!debug_pagealloc_enabled())
+		spin_unlock(&cpa_lock);
+	base = pgp_ro_alloc();
+	if(!base)
+		base = alloc_pages(GFP_KERNEL, 0);
+	else 
+		ret = page_address(base);
+	if (!debug_pagealloc_enabled())
+		spin_lock(&cpa_lock);
+	if (!base)
+		return -ENOMEM;
+
+	if (__split_large_page(cpa, kpte, address, base)) {
+		if(!ret)
+			__free_page(base);
+		else 
+			pgp_ro_free(ret);
+	}
+
+	return 0;
+}
+#else
 static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 			    unsigned long address)
 {
@@ -1064,6 +1093,7 @@ static int split_large_page(struct cpa_data *cpa, pte_t *kpte,
 
 	return 0;
 }
+#endif
 
 static bool try_to_free_pte_page(pte_t *pte)
 {
@@ -1075,7 +1105,7 @@ static bool try_to_free_pte_page(pte_t *pte)
 
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 	if(!pgp_ro_free((void *)pte)){
-		PGP_WARNING("[PGP]: pte free fail, not a pgp page\n");
+		PGP_WARNING_FREE(pte);
 		free_page((unsigned long)pte);
 	}
 #else
@@ -1092,9 +1122,9 @@ static bool try_to_free_pmd_page(pmd_t *pmd)
 		if (!pmd_none(pmd[i]))
 			return false;
 
-#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
 	if(!pgp_ro_free((void *)pmd)){
-		PGP_WARNING("[PGP]: pte free fail, not a pgp page\n");
+		PGP_WARNING_FREE(pmd);
 		free_page((unsigned long)pmd);
 	}
 #else
@@ -1221,7 +1251,7 @@ static int alloc_pte_page(pmd_t *pmd)
 {
 	pte_t *pte = (pte_t *)pgp_ro_zalloc(); 
 	if(!pte) {
-		PGP_WARNING("[PGP]: pte allocation fail, use normal alloctor instead\n");
+		PGP_WARNING_ALLOC();
 		pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
 	}
 		
@@ -1248,7 +1278,7 @@ static int alloc_pmd_page(pud_t *pud)
 {
 	pmd_t *pmd = (pmd_t *)pgp_ro_zalloc(); 
 	if(!pmd) {
-		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING_ALLOC();
 		pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
 	}
 
@@ -1459,7 +1489,7 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
 		p4d = (p4d_t *)pgp_ro_zalloc();
 		if(!p4d){
-			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			PGP_WARNING_ALLOC();
 			p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -1479,7 +1509,7 @@ static int populate_pgd(struct cpa_data *cpa, unsigned long addr)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 		pud = (pud_t *)pgp_ro_zalloc();
 		if(!pud){
-			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			PGP_WARNING_ALLOC();
 			pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else

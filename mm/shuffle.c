@@ -198,7 +198,7 @@ void add_to_free_area_random(struct page *page, struct free_area *area,
 		rand = get_random_u64();
 	}
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
-	if(pgp_ro_buf_ready && page_to_phys(page) >= PGP_RO_BUF_BASE && page_to_phys(page) < PGP_RO_BUF_BASE + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && page_to_phys(page) >= pgp_ro_buf_base && page_to_phys(page) < pgp_ro_buf_end){
 		panic("[PGP] alloc page to others: 0x%016llx", page_to_phys(page));
 	}
 #endif

@@ -142,7 +142,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
 		p4d = (p4d_t *)pgp_ro_zalloc();
 		if(!p4d){
-			PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+			PGP_WARNING_ALLOC();
 			p4d = (p4d_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -158,7 +158,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 		pud = (pud_t *)pgp_ro_zalloc();
 		if(!pud){
-			PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
+			PGP_WARNING_ALLOC();
 			pud = (pud_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -174,7 +174,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
 		pmd = (pmd_t *)pgp_ro_zalloc();
 		if(!pmd){
-			PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+			PGP_WARNING_ALLOC();
 			pmd = (pmd_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else
@@ -190,7 +190,7 @@ static int init_transition_pgtable(struct kimage *image, pgd_t *pgd)
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
 		pte = (pte_t *)pgp_ro_zalloc();
 		if(!pte){
-			PGP_WARNING("[PGP]: pte allocation fail, use normal alloctor instead\n");
+			PGP_WARNING_ALLOC();
 			pte = (pte_t *)get_zeroed_page(GFP_KERNEL);
 		}
 #else

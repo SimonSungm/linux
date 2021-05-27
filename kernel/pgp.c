@@ -17,6 +17,15 @@ EXPORT_SYMBOL(pgp_ro_buf_ready);
 volatile bool pgp_hyp_init = false;
 EXPORT_SYMBOL(pgp_hyp_init);
 
+#ifdef PGP_DEBUG_ALLOCATION
+int pgcnt = 0;
+EXPORT_SYMBOL(pgcnt);
+long alloc_cnt = 0;
+EXPORT_SYMBOL(alloc_cnt);
+long free_cnt = 0;
+EXPORT_SYMBOL(free_cnt);
+#endif
+
 spinlock_t ro_pgp_pages_lock = __SPIN_LOCK_UNLOCKED();
 LIST_HEAD(pgp_page_list);
 
@@ -27,13 +36,20 @@ void __init init_pgp_page_list(void)
 {
 	unsigned long start_pfn = PFN_DOWN(pgp_ro_buf_base);
 	unsigned long end_pfn = PFN_UP(pgp_ro_buf_end);
+	struct page *page;
+	int cnt = 0;
 	
 	for (; start_pfn < end_pfn; start_pfn++) {
 		if (pfn_valid(start_pfn)) {
-			struct page *page = pfn_to_page(start_pfn);
+			cnt ++;
+			page = pfn_to_page(start_pfn);
 			list_add(&page->lru, &pgp_page_list);
 		}
 	}
+	printk("[PGP INIT]: %d available pgp ro pages in total, expect: %ld\n", cnt, PGP_RO_PAGES);
+#ifdef PGP_DEBUG_ALLOCATION
+	pgcnt = cnt;
+#endif
 }
 
 /**
@@ -54,6 +70,10 @@ struct page *pgp_ro_alloc(void)
 	page = list_first_entry_or_null(&pgp_page_list, struct page, lru);
 	if(page != NULL) {
 		list_del(&page->lru);
+#ifdef PGP_DEBUG_ALLOCATION
+		pgcnt --;
+		alloc_cnt ++;
+#endif
 	}
 	spin_unlock_irqrestore(&ro_pgp_pages_lock,flags);
 
@@ -99,6 +119,10 @@ bool pgp_ro_free(void* addr)
 	
 	spin_lock_irqsave(&ro_pgp_pages_lock, flags);
 	list_add(&page->lru, &pgp_page_list);
+#ifdef PGP_DEBUG_ALLOCATION
+	pgcnt ++;
+	free_cnt ++;
+#endif
 	spin_unlock_irqrestore(&ro_pgp_pages_lock, flags);
 
 	return true;
@@ -125,10 +149,8 @@ void pgp_memset(void *dst, char c, size_t len)
 			jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMSET | len, (unsigned long)dst, c);
 #endif
     } else {
-#ifndef __DEBUG_PAGE_TABLE_PROTECTION
 		if(pgp_hyp_init && pgp_ro_buf_ready)
-			printk("[PGP] pgp_memset fail at 0x%016lx", (unsigned long)dst);
-#endif
+			PGP_WARNING("[PGP] pgp_memset fail at 0x%016lx", (unsigned long)dst);
         memset(dst, c, len);
     }
 }
@@ -154,10 +176,8 @@ void pgp_memcpy(void *dst, void *src, size_t len)
 			jailhouse_call_arg2_custom(JAILHOUSE_HC_MEMCPY | len, (unsigned long)dst, (unsigned long)virt_to_phys(src));
 #endif
     } else {
-#ifdef __DEBUG_PAGE_TABLE_PROTECTION
 		if(pgp_hyp_init && pgp_ro_buf_ready)
-			printk("[PGP] pgp_memcpy fail from src 0x%016lx to dst 0x%016lx", (unsigned long)src, (unsigned long)dst);
-#endif
+			PGP_WARNING("[PGP] pgp_memcpy fail from src 0x%016lx to dst 0x%016lx", (unsigned long)src, (unsigned long)dst);
         memcpy(dst, src, len);
     }
 }

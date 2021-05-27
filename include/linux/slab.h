@@ -567,7 +567,7 @@ static __always_inline void *kmalloc(size_t size, gfp_t flags)
 	}
 #if defined(CONFIG_PAGE_TABLE_PROTECTION) && defined(PGP_DEBUG_ALLOCATION)
 	ret = __kmalloc(size, flags);
-	if(pgp_ro_buf_ready && (unsigned long)ret >= PGP_ROBUF_VA && (unsigned long)ret < PGP_ROBUF_VA + PGP_ROBUF_SIZE){
+	if(pgp_ro_buf_ready && (unsigned long)ret >= pgp_ro_buf_base_va && (unsigned long)ret < pgp_ro_buf_end_va){
 		printk("kmalloc to others: 0x%016lx", (unsigned long)ret);
 	}
 	return ret;

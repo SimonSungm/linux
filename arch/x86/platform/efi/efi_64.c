@@ -215,22 +215,50 @@ int __init efi_alloc_page_tables(void)
 		return 0;
 
 	gfp_mask = GFP_KERNEL | __GFP_ZERO;
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+	efi_pgd = (pgd_t *)pgp_ro_zalloc();
+	if(!efi_pgd) {
+		PGP_WARNING_ALLOC();
+		efi_pgd = (pgd_t *)__get_free_pages(gfp_mask, PGD_ALLOCATION_ORDER);
+	}
+#else
 	efi_pgd = (pgd_t *)__get_free_pages(gfp_mask, PGD_ALLOCATION_ORDER);
+#endif
 	if (!efi_pgd)
 		return -ENOMEM;
 
 	pgd = efi_pgd + pgd_index(EFI_VA_END);
 	p4d = p4d_alloc(&init_mm, pgd, EFI_VA_END);
 	if (!p4d) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+		if(!pgp_ro_free((void *)efi_pgd)){
+			PGP_WARNING_FREE(efi_pgd);
+			free_page((unsigned long)efi_pgd);
+		}
+#else
 		free_page((unsigned long)efi_pgd);
+#endif		
 		return -ENOMEM;
 	}
 
 	pud = pud_alloc(&init_mm, p4d, EFI_VA_END);
 	if (!pud) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+		if (pgtable_l5_enabled()) {
+			if(!pgp_ro_free((void *)pgd_page_vaddr(*pgd))){
+				PGP_WARNING_FREE(pgd_page_vaddr(*pgd));
+				free_page((unsigned long) pgd_page_vaddr(*pgd));
+			}
+		}
+		if(!pgp_ro_free((void *)efi_pgd)){
+			PGP_WARNING_FREE(efi_pgd);
+			free_pages((unsigned long)efi_pgd, PGD_ALLOCATION_ORDER);
+		}
+#else
 		if (pgtable_l5_enabled())
 			free_page((unsigned long) pgd_page_vaddr(*pgd));
 		free_pages((unsigned long)efi_pgd, PGD_ALLOCATION_ORDER);
+#endif
 		return -ENOMEM;
 	}
 

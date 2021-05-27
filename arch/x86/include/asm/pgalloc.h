@@ -99,7 +99,7 @@ static inline pmd_t *pmd_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 	pmd = (pmd_t *)pgp_ro_zalloc();
 	if (!pmd) {
-		PGP_WARNING("[PGP]: pmd allocation fail, use normal alloctor instead\n");
+		PGP_WARNING_ALLOC();
 		if (mm == &init_mm)
 			gfp &= ~__GFP_ACCOUNT;
 		page = alloc_pages(gfp, 0);
@@ -139,7 +139,7 @@ static inline void pmd_free(struct mm_struct *mm, pmd_t *pmd)
 	pgtable_pmd_page_dtor(virt_to_page(pmd));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
 	if(!pgp_ro_free((void *)pmd)) {
-		PGP_WARNING("[PGP]: pmd free fail, not a pgp page\n");
+		PGP_WARNING_FREE(pmd);
 		free_page((unsigned long)pmd);
 	}
 #else
@@ -192,7 +192,7 @@ static inline pud_t *pud_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 	pud = (pud_t *)pgp_ro_zalloc();
 	if(!pud){
-		PGP_WARNING("[PGP]: pud allocation fail, use normal alloctor instead\n");
+		PGP_WARNING_ALLOC();
 		if (mm == &init_mm)
 			gfp &= ~__GFP_ACCOUNT;
 		return (pud_t *)get_zeroed_page(gfp);
@@ -212,7 +212,7 @@ static inline void pud_free(struct mm_struct *mm, pud_t *pud)
 	BUG_ON((unsigned long)pud & (PAGE_SIZE-1));
 #ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
 	if(!pgp_ro_free((void *)pud)) {
-		PGP_WARNING("[PGP]: pud free fail, not a pgp page\n");
+		PGP_WARNING_FREE(pud);
 		free_page((unsigned long)pud);
 	}
 #else
@@ -253,12 +253,12 @@ static inline p4d_t *p4d_alloc_one(struct mm_struct *mm, unsigned long addr)
 
 	p4d = (p4d_t *)pgp_ro_zalloc();
 	if(!p4d) {
-		PGP_WARNING("[PGP]: p4d allocation fail, use normal alloctor instead\n");
+		PGP_WARNING_ALLOC();
 		if (mm == &init_mm)
 			gfp &= ~__GFP_ACCOUNT;
 		return (p4d_t *)get_zeroed_page(gfp);
 	}
-	return p4d
+	return p4d;
 #else
 	gfp_t gfp = GFP_KERNEL_ACCOUNT;
 
@@ -274,9 +274,9 @@ static inline void p4d_free(struct mm_struct *mm, p4d_t *p4d)
 		return;
 
 	BUG_ON((unsigned long)p4d & (PAGE_SIZE-1));
-#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
 	if(!pgp_ro_free((void *)p4d)) {
-		PGP_WARNING("[PGP]: pud free fail, not a pgp page\n");
+		PGP_WARNING_FREE(p4d);
 		free_page((unsigned long)p4d);
 	}
 #else

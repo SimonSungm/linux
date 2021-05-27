@@ -145,7 +145,15 @@ pte_t * __meminit vmemmap_pte_populate(pmd_t *pmd, unsigned long addr, int node)
 	pte_t *pte = pte_offset_kernel(pmd, addr);
 	if (pte_none(*pte)) {
 		pte_t entry;
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PTE
+		void *p = pgp_ro_zalloc();
+		if(!p) {
+			PGP_WARNING_ALLOC();
+			p = vmemmap_alloc_block_buf(PAGE_SIZE, node);
+		}
+#else
 		void *p = vmemmap_alloc_block_buf(PAGE_SIZE, node);
+#endif
 		if (!p)
 			return NULL;
 		entry = pfn_pte(__pa(p) >> PAGE_SHIFT, PAGE_KERNEL);
@@ -169,7 +177,15 @@ pmd_t * __meminit vmemmap_pmd_populate(pud_t *pud, unsigned long addr, int node)
 {
 	pmd_t *pmd = pmd_offset(pud, addr);
 	if (pmd_none(*pmd)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PMD
+		void *p = pgp_ro_zalloc();
+		if(!p) {
+			PGP_WARNING_ALLOC();
+			p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+		}
+#else
 		void *p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+#endif
 		if (!p)
 			return NULL;
 		pmd_populate_kernel(&init_mm, pmd, p);
@@ -181,7 +197,15 @@ pud_t * __meminit vmemmap_pud_populate(p4d_t *p4d, unsigned long addr, int node)
 {
 	pud_t *pud = pud_offset(p4d, addr);
 	if (pud_none(*pud)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PUD
+		void *p = pgp_ro_zalloc();
+		if(!p) {
+			PGP_WARNING_ALLOC();
+			p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+		}
+#else
 		void *p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+#endif
 		if (!p)
 			return NULL;
 		pud_populate(&init_mm, pud, p);
@@ -193,7 +217,15 @@ p4d_t * __meminit vmemmap_p4d_populate(pgd_t *pgd, unsigned long addr, int node)
 {
 	p4d_t *p4d = p4d_offset(pgd, addr);
 	if (p4d_none(*p4d)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_P4D
+		void *p = pgp_ro_zalloc();
+		if(!p) {
+			PGP_WARNING_ALLOC();
+			p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+		}
+#else
 		void *p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+#endif
 		if (!p)
 			return NULL;
 		p4d_populate(&init_mm, p4d, p);
@@ -205,7 +237,15 @@ pgd_t * __meminit vmemmap_pgd_populate(unsigned long addr, int node)
 {
 	pgd_t *pgd = pgd_offset_k(addr);
 	if (pgd_none(*pgd)) {
+#ifdef CONFIG_PAGE_TABLE_PROTECTION_PGD
+		void *p = pgp_ro_zalloc();
+		if(!p) {
+			PGP_WARNING_ALLOC();
+			p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+		}
+#else
 		void *p = vmemmap_alloc_block_zero(PAGE_SIZE, node);
+#endif
 		if (!p)
 			return NULL;
 		pgd_populate(&init_mm, pgd, p);
